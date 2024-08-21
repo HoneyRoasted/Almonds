@@ -107,7 +107,7 @@ public interface ConstraintMapper {
         void process(Context context, ConstraintNode node, T constraint);
     }
 
-    interface Binary<L extends Context, R extends Constraint> extends ConstraintMapper {
+    interface Binary<L extends Constraint, R extends Constraint> extends ConstraintMapper {
 
         @Override
         default int arity() {
