@@ -3,6 +3,7 @@ package honeyroasted.almonds;
 import honeyroasted.collect.copy.Copyable;
 import honeyroasted.collect.equivalence.Equivalence;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -34,7 +35,19 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void> pe
 
     void updateConstraints();
 
-    ConstraintTree expand(Operation operation, Collection<ConstraintNode> newChildren);
+    default ConstraintTree expand(Operation operation, Constraint... newChildren) {
+        return this.expand(operation, Arrays.stream(newChildren).map(c -> c.tracked(this.trackedConstraint()).createLeaf()).toList());
+    }
+
+    default ConstraintTree expand(Operation operation, TrackedConstraint... newChildren) {
+        return this.expand(operation, Arrays.stream(newChildren).map(TrackedConstraint::createLeaf).toList());
+    }
+
+    default ConstraintTree expand(Operation operation, ConstraintNode... newChildren) {
+        return this.expand(operation, List.of(newChildren));
+    }
+
+    ConstraintTree expand(Operation operation, Collection<? extends ConstraintNode> newChildren);
 
     ConstraintLeaf collapse();
 

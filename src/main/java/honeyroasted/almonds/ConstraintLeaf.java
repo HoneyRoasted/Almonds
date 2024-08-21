@@ -43,7 +43,7 @@ public final class ConstraintLeaf implements ConstraintNode {
     }
 
     @Override
-    public ConstraintTree expand(Operation operation, Collection<ConstraintNode> newChildren) {
+    public ConstraintTree expand(Operation operation, Collection<? extends ConstraintNode> newChildren) {
         ConstraintTree tree = new ConstraintTree(this.constraint, operation);
         this.parent.attach(tree)
                 .detach(this);

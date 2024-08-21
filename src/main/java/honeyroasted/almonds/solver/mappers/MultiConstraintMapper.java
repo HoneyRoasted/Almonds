@@ -5,6 +5,9 @@ import honeyroasted.almonds.ConstraintNode;
 import honeyroasted.almonds.ConstraintTree;
 import honeyroasted.almonds.solver.ConstraintMapper;
 
+import java.util.LinkedHashSet;
+import java.util.stream.Collectors;
+
 public class MultiConstraintMapper implements ConstraintMapper.Unary<Constraint.Multi> {
     ConstraintMapper INSTANCE = new MultiConstraintMapper();
 
@@ -15,7 +18,7 @@ public class MultiConstraintMapper implements ConstraintMapper.Unary<Constraint.
 
     @Override
     public void process(Context context, ConstraintNode node, Constraint.Multi constraint) {
-        ConstraintTree tree = node.expand(constraint.operation());
-        constraint.constraints().forEach(cn -> tree.attach(cn.tracked().createLeaf()));
+        node.expand(constraint.operation(),
+                constraint.constraints().stream().map(cn -> cn.tracked(node.trackedConstraint()).createLeaf()).collect(Collectors.toCollection(LinkedHashSet::new)));
     }
 }

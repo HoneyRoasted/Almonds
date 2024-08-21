@@ -75,7 +75,7 @@ public final class ConstraintTree implements ConstraintNode {
         return this;
     }
 
-    public ConstraintTree attach(Collection<ConstraintNode> nodes) {
+    public ConstraintTree attach(Collection<? extends ConstraintNode> nodes) {
         for (ConstraintNode node : nodes) {
             node.setParent(this);
             this.children.add(node);
@@ -93,7 +93,7 @@ public final class ConstraintTree implements ConstraintNode {
         return this;
     }
 
-    public ConstraintTree detach(Collection<ConstraintNode> nodes) {
+    public ConstraintTree detach(Collection<? extends ConstraintNode> nodes) {
         for (ConstraintNode node : nodes) {
             if (node.parent() == this) {
                 node.setParent(null);
@@ -196,7 +196,7 @@ public final class ConstraintTree implements ConstraintNode {
     }
 
     @Override
-    public ConstraintTree expand(Operation operation, Collection<ConstraintNode> newChildren) {
+    public ConstraintTree expand(Operation operation, Collection<? extends ConstraintNode> newChildren) {
         if (operation == this.operation) {
             return this;
         } else {
