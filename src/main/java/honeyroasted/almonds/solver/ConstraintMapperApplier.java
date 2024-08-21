@@ -1,0 +1,156 @@
+package honeyroasted.almonds.solver;
+
+import honeyroasted.almonds.Constraint;
+import honeyroasted.almonds.ConstraintLeaf;
+import honeyroasted.almonds.ConstraintNode;
+import honeyroasted.almonds.ConstraintTree;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.function.Consumer;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
+public class ConstraintMapperApplier implements ConstraintMapper {
+    private List<ConstraintMapper> mappers;
+
+    public ConstraintMapperApplier(List<ConstraintMapper> mappers) {
+        this.mappers = mappers;
+    }
+
+    @Override
+    public boolean filter(ConstraintNode node) {
+        return true;
+    }
+
+    @Override
+    public boolean accepts(ConstraintNode... nodes) {
+        return true;
+    }
+
+    @Override
+    public void process(Context context, ConstraintNode... nodes) {
+        ConstraintTree and = new ConstraintTree(Constraint.and().tracked(), ConstraintNode.Operation.AND);
+        Stream.of(nodes).forEach(cn -> and.attach(cn.copy()));
+        process(and);
+        context.replaceBranch(and);
+    }
+
+    public ConstraintNode process(ConstraintNode node) {
+        ConstraintNode previous = node.copy();
+        ConstraintNode current = previous.disjunctiveForm().flattenedForm();
+
+        Context context = new Context();
+
+        do {
+            previous = current.copy();
+
+            for (ConstraintMapper mapper : this.mappers) {
+                if (current instanceof ConstraintTree tree) {
+                    Set<ConstraintNode> children = new LinkedHashSet<>(tree.children());
+
+                    for (ConstraintNode child : children) {
+                        if (child instanceof ConstraintLeaf leaf) {
+                            consume(List.of(leaf), context, mapper);
+                        } else if (child instanceof ConstraintTree childTree) {
+                            consume(childTree.children(), context, mapper);
+                        }
+
+                        if (context.discardBranch()) {
+                            tree.detach(child);
+                        } else if (context.replaceBranch() != null) {
+                            tree.detach(child)
+                                    .attach(context.replaceBranch().copy());
+                        }
+                    }
+                } else if (current instanceof ConstraintLeaf leaf) {
+                    consume(List.of(leaf), context, mapper);
+
+                    if (context.discardBranch()) {
+                        leaf.setStatus(ConstraintNode.Status.FALSE);
+                    } else if (context.replaceBranch() != null) {
+                        current = context.replaceBranch().copy();
+                    }
+                }
+
+                context.reset();
+                current.updateConstraints();
+                current = current.disjunctiveForm().flattenedForm();
+            }
+
+
+        } while (!ConstraintNode.STRUCTURAL.equals(previous, current) && current.statusCouldChange());
+
+        return current;
+    }
+
+    private static void consume(Collection<ConstraintNode> processing, ConstraintMapper.Context context, ConstraintMapper mapper) {
+        consumeSubsets(processing.stream().filter(mapper::filter).toList(), mapper.arity(), mapper.commutative(), arr -> {
+            if (mapper.accepts(arr)) {
+                mapper.process(null, arr);
+            }
+        });
+    }
+
+    private static <T> void consumeSubsets(List<T> processing, int size, boolean commutative, Consumer<T[]> baseCase) {
+        if (size <= 0 || size == processing.size()) {
+            baseCase.accept((T[]) processing.toArray(Object[]::new));
+        } else if (size < processing.size()) {
+            T[] mem = (T[]) new Object[size];
+            T[] input = (T[]) processing.toArray(Object[]::new);
+            int[] subset = IntStream.range(0, size).toArray();
+
+            consumeSubset(mem, input, subset, commutative, baseCase);
+            while (true) {
+                int i;
+                for (i = size - 1; i >= 0 && subset[i] == input.length - size + i; i--) ;
+                if (i < 0) break;
+
+                subset[i]++;
+                for (++i; i < size; i++) {
+                    subset[i] = subset[i - 1] + 1;
+                }
+                consumeSubset(mem, input, subset, commutative, baseCase);
+            }
+        }
+    }
+
+    private static <T> void consumeSubset(T[] mem, T[] input, int[] subset, boolean commutative, Consumer<T[]> baseCase) {
+        if (commutative) {
+            copyMem(mem, input, subset);
+            baseCase.accept(mem);
+        } else {
+            permuteAndConsumeSubset(mem, input, subset, 0, subset.length - 1, baseCase);
+        }
+    }
+
+    private static <T> void permuteAndConsumeSubset(T[] mem, T[] input, int[] subset, int l, int h, Consumer<T[]> baseCase) {
+        if (l == h) {
+            copyMem(mem, input, subset);
+            baseCase.accept(mem);
+        } else {
+            for (int i = l; i <= h; i++) {
+                swap(subset, l, i);
+                permuteAndConsumeSubset(mem, input, subset, l + 1, h, baseCase);
+                swap(subset, l, i);
+            }
+        }
+    }
+
+    private static void swap(int nums[], int l, int i) {
+        int temp = nums[l];
+        nums[l] = nums[i];
+        nums[i] = temp;
+    }
+
+
+    private static <T> void copyMem(T[] mem, T[] input, int[] subset) {
+        for (int i = 0; i < subset.length; i++) {
+            mem[i] = input[subset[i]];
+        }
+    }
+}
