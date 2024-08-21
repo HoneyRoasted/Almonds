@@ -92,8 +92,9 @@ public final class ConstraintLeaf implements ConstraintNode {
     }
 
     @Override
-    public void overrideStatus(Status status) {
+    public ConstraintLeaf overrideStatus(Status status) {
         this.setStatus(status);
+        return this;
     }
 
     @Override
@@ -107,8 +108,9 @@ public final class ConstraintLeaf implements ConstraintNode {
     }
 
     @Override
-    public void setParent(ConstraintTree parent) {
+    public ConstraintLeaf setParent(ConstraintTree parent) {
         this.parent = parent;
+        return this;
     }
 
     @Override
@@ -117,8 +119,9 @@ public final class ConstraintLeaf implements ConstraintNode {
     }
 
     @Override
-    public void updateConstraints() {
+    public ConstraintLeaf updateConstraints() {
         this.constraint.setSuccess(this.status.asBoolean());
+        return this;
     }
 
     public ConstraintLeaf setStatus(Status status) {

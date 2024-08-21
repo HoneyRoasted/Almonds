@@ -27,7 +27,7 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void> pe
         this.overrideStatus(Status.fromBoolean(status));
     }
 
-    void overrideStatus(Status status);
+    ConstraintNode overrideStatus(Status status);
 
     default boolean statusCouldChange() {
         return strictStatus() == Status.UNKNOWN;
@@ -37,7 +37,7 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void> pe
 
     ConstraintTree parent();
 
-    void setParent(ConstraintTree parent);
+    ConstraintNode setParent(ConstraintTree parent);
 
     default Constraint constraint() {
         return trackedConstraint().constraint();
@@ -45,7 +45,7 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void> pe
 
     TrackedConstraint trackedConstraint();
 
-    void updateConstraints();
+    ConstraintNode updateConstraints();
 
     default ConstraintTree expand(Operation operation, Constraint... newChildren) {
         return this.expand(operation, Arrays.stream(newChildren).map(c -> c.tracked(this.trackedConstraint()).createLeaf()).toList());

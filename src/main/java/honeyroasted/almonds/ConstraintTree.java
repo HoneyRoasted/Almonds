@@ -165,8 +165,9 @@ public final class ConstraintTree implements ConstraintNode {
     }
 
     @Override
-    public void overrideStatus(Status status) {
+    public ConstraintTree overrideStatus(Status status) {
         this.children.forEach(cn -> cn.overrideStatus(status));
+        return this;
     }
 
     @Override
@@ -180,8 +181,9 @@ public final class ConstraintTree implements ConstraintNode {
     }
 
     @Override
-    public void setParent(ConstraintTree parent) {
+    public ConstraintTree setParent(ConstraintTree parent) {
         this.parent = parent;
+        return this;
     }
 
     @Override
@@ -190,14 +192,16 @@ public final class ConstraintTree implements ConstraintNode {
     }
 
     @Override
-    public void updateConstraints() {
+    public ConstraintTree updateConstraints() {
         this.constraint.setSuccess(this.status().asBoolean());
         this.children.forEach(ConstraintNode::updateConstraints);
+        return this;
     }
 
     @Override
     public ConstraintTree expand(Operation operation, Collection<? extends ConstraintNode> newChildren) {
         if (operation == this.operation) {
+            this.attach(newChildren);
             return this;
         } else {
             ConstraintTree expand = new ConstraintTree(this.constraint, operation);

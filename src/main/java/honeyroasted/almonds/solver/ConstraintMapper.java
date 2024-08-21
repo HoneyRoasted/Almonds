@@ -5,8 +5,12 @@ import honeyroasted.almonds.ConstraintNode;
 import honeyroasted.almonds.ConstraintTree;
 
 import java.lang.reflect.ParameterizedType;
+import java.util.HashMap;
+import java.util.Map;
 
 public interface ConstraintMapper {
+    String DISCARD_BRANCH = "honeyroasted.almonds.discard_branch";
+    String REPLACE_BRANCH = "honeyroasted.almonds.replace_branch";
 
     default int arity() {
         return -1;
@@ -23,31 +27,29 @@ public interface ConstraintMapper {
     void process(Context context, ConstraintNode... nodes);
 
     class Context {
-        private boolean discardBranch;
-        private ConstraintTree replaceBranch;
+        private Map<String, Object> global = new HashMap<>();
 
-        public Context reset() {
-            this.discardBranch = false;
-            this.replaceBranch = null;
+        public Context inheritProperties(Context other) {
+            other.global.forEach((k, v) -> this.global.putIfAbsent(k, v));
             return this;
         }
 
-        public Context discardBranch(boolean value) {
-            this.discardBranch = value;
+        public Context attach(String name, Object value) {
+            this.global.put(name, value);
             return this;
         }
 
-        public Context replaceBranch(ConstraintTree tree) {
-            this.replaceBranch = tree;
+        public Context remove(String name) {
+            this.global.remove(name);
             return this;
         }
 
-        public ConstraintTree replaceBranch() {
-            return this.replaceBranch;
+        public boolean hasProperty(String name) {
+            return this.global.containsKey(name);
         }
 
-        public boolean discardBranch() {
-            return this.discardBranch;
+        public <T> T property(String name) {
+            return (T) this.global.get(name);
         }
 
         public Context and(ConstraintNode current, ConstraintNode... toAdd) {

@@ -34,15 +34,17 @@ public class ConstraintMapperApplier implements ConstraintMapper {
     public void process(Context context, ConstraintNode... nodes) {
         ConstraintTree and = new ConstraintTree(Constraint.and().tracked(), ConstraintNode.Operation.AND);
         Stream.of(nodes).forEach(cn -> and.attach(cn.copy()));
-        process(and);
-        context.replaceBranch(and);
+        process(and, new Context().inheritProperties(context));
+        context.attach(ConstraintMapper.REPLACE_BRANCH, and);
     }
 
     public ConstraintNode process(ConstraintNode node) {
+        return this.process(node, new Context());
+    }
+
+    public ConstraintNode process(ConstraintNode node, Context context) {
         ConstraintNode previous = node.copy();
         ConstraintNode current = previous.disjunctiveForm().flattenedForm();
-
-        Context context = new Context();
 
         do {
             previous = current.copy();
@@ -58,24 +60,27 @@ public class ConstraintMapperApplier implements ConstraintMapper {
                             consume(childTree.children(), context, mapper);
                         }
 
-                        if (context.discardBranch()) {
+                        if (context.hasProperty(DISCARD_BRANCH)) {
                             tree.detach(child);
-                        } else if (context.replaceBranch() != null) {
-                            tree.detach(child)
-                                    .attach(context.replaceBranch().copy());
+                        } else if (context.hasProperty(REPLACE_BRANCH)) {
+                            ConstraintNode replacement = context.property(REPLACE_BRANCH);
+                            tree.detach(child).attach(replacement.copy());
                         }
                     }
                 } else if (current instanceof ConstraintLeaf leaf) {
                     consume(List.of(leaf), context, mapper);
 
-                    if (context.discardBranch()) {
+                    if (context.hasProperty(DISCARD_BRANCH)) {
                         leaf.setStatus(ConstraintNode.Status.FALSE);
-                    } else if (context.replaceBranch() != null) {
-                        current = context.replaceBranch().copy();
+                    } else if (context.hasProperty(REPLACE_BRANCH)) {
+                        ConstraintNode replacement = context.property(REPLACE_BRANCH);
+                        current = replacement.copy();
                     }
                 }
 
-                context.reset();
+                context.remove(DISCARD_BRANCH);
+                context.remove(REPLACE_BRANCH);
+
                 current.updateConstraints();
                 current = current.disjunctiveForm().flattenedForm();
             }
