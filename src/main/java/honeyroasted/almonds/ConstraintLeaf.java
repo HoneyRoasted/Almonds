@@ -3,6 +3,7 @@ package honeyroasted.almonds;
 import honeyroasted.collect.equivalence.Equivalence;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -42,10 +43,11 @@ public final class ConstraintLeaf implements ConstraintNode {
     }
 
     @Override
-    public ConstraintTree expand(Operation operation) {
+    public ConstraintTree expand(Operation operation, Collection<ConstraintNode> newChildren) {
         ConstraintTree tree = new ConstraintTree(this.constraint, operation);
         this.parent.attach(tree)
                 .detach(this);
+        tree.attach(newChildren);
         return tree;
     }
 

@@ -196,14 +196,35 @@ public final class ConstraintTree implements ConstraintNode {
     }
 
     @Override
-    public ConstraintTree expand(Operation operation) {
+    public ConstraintTree expand(Operation operation, Collection<ConstraintNode> newChildren) {
         if (operation == this.operation) {
             return this;
         } else {
             ConstraintTree expand = new ConstraintTree(this.constraint, operation);
             this.parent.attach(expand)
                     .detach(this);
-            expand.attach(this);
+
+            if (this.operation == Operation.AND) {
+                newChildren.forEach(cn -> {
+                    Set<ConstraintNode> subChildren = this.children().stream().map(ConstraintNode::copy).collect(Collectors.toCollection(LinkedHashSet::new));
+                    subChildren.add(cn.copy());
+
+                    ConstraintTree subTree = Constraint.multi(Operation.AND).tracked(this.constraint).createTree(Operation.AND);
+                    subTree.attach(subChildren);
+
+                    expand.attach(subTree);
+                });
+            } else if (this.operation == Operation.OR) {
+                this.children().forEach(cn -> {
+                    Set<ConstraintNode> subChildren = newChildren.stream().map(ConstraintNode::copy).collect(Collectors.toCollection(LinkedHashSet::new));
+                    subChildren.add(cn.copy());
+
+                    ConstraintTree subTree = Constraint.multi(Operation.OR).tracked(this.constraint).createTree(Operation.OR);
+                    subTree.attach(subChildren);
+
+                    expand.attach(subTree);
+                });
+            }
             return expand;
         }
     }

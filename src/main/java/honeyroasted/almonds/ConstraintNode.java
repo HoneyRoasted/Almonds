@@ -3,6 +3,7 @@ package honeyroasted.almonds;
 import honeyroasted.collect.copy.Copyable;
 import honeyroasted.collect.equivalence.Equivalence;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -33,7 +34,7 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void> pe
 
     void updateConstraints();
 
-    ConstraintTree expand(Operation operation);
+    ConstraintTree expand(Operation operation, Collection<ConstraintNode> newChildren);
 
     ConstraintLeaf collapse();
 
@@ -58,6 +59,11 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void> pe
     String toString(boolean useSimpleName);
 
     String toEquationString();
+
+    @Override
+    default ConstraintNode copy() {
+        return Copyable.super.copy();
+    }
 
     enum Operation {
         AND("&"), OR("|");
