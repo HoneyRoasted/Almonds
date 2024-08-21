@@ -5,6 +5,7 @@ import honeyroasted.collect.equivalence.Equivalence;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -68,6 +69,17 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void> pe
     ConstraintTree expandInPlace(Operation defaultOp);
 
     ConstraintLeaf collapse();
+
+    default Set<ConstraintNode> neighbors(Operation operation) {
+        if (this.parent() != null && this.parent().operation() == operation) {
+            Set<ConstraintNode> result = new LinkedHashSet<>();
+            result.addAll(this.parent().children());
+            result.addAll(this.parent().neighbors(operation));
+            return result;
+        }
+
+        return Set.of(this);
+    }
 
     ConstraintNode flattenedForm();
 
