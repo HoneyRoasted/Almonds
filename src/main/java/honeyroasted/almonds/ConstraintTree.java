@@ -53,6 +53,20 @@ public final class ConstraintTree implements ConstraintNode {
         this(null, constraint, operation, new LinkedHashSet<>());
     }
 
+    public ConstraintTree attach(Constraint... constraints) {
+        for (Constraint con : constraints) {
+            this.attach(con.tracked(this.constraint).createLeaf());
+        }
+        return this;
+    }
+
+    public ConstraintTree attach(TrackedConstraint... constraints) {
+        for (TrackedConstraint con : constraints) {
+            this.attach(con.createLeaf());
+        }
+        return this;
+    }
+
     public ConstraintTree attach(ConstraintNode... nodes) {
         for (ConstraintNode node : nodes) {
             node.setParent(this);
