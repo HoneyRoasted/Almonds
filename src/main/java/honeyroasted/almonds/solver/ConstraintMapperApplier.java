@@ -5,9 +5,7 @@ import honeyroasted.almonds.ConstraintLeaf;
 import honeyroasted.almonds.ConstraintNode;
 import honeyroasted.almonds.ConstraintTree;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;

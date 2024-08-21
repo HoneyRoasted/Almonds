@@ -126,6 +126,18 @@ public interface Constraint {
             this.right = right;
         }
 
+        public L left() {
+            return this.left;
+        }
+
+        public M middle() {
+            return this.middle;
+        }
+
+        public R right() {
+            return this.right;
+        }
+
         @Override
         public List<?> parameters() {
             return List.of(this.left, this.middle, this.right);

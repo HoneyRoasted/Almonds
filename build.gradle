@@ -7,7 +7,7 @@ sourceCompatibility = 1.21
 targetCompatibility = 1.21
 
 group 'honeyroasted.almonds'
-version '0.0.0'
+version '0.0.1'
 
 repositories {
     mavenCentral()
