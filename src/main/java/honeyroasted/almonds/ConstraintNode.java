@@ -11,9 +11,21 @@ import java.util.Set;
 public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void> permits ConstraintLeaf, ConstraintTree {
     Equivalence<ConstraintNode> STRUCTURAL = Equivalence.instancing(ConstraintNode.class, ConstraintLeaf.STRUCTURAL, ConstraintTree.STRUCTURAL);
 
+    default boolean satisfied() {
+        return this.status().asBoolean();
+    }
+
     Status status();
 
+    default boolean strictlySatisfied() {
+        return this.strictStatus().asBoolean();
+    }
+
     Status strictStatus();
+
+    default void overrideStatus(boolean status) {
+        this.overrideStatus(Status.fromBoolean(status));
+    }
 
     void overrideStatus(Status status);
 
@@ -148,7 +160,11 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void> pe
             this.value = value;
         }
 
-        public boolean value() {
+        public static Status fromBoolean(boolean value) {
+            return value ? TRUE : FALSE;
+        }
+
+        public boolean asBoolean() {
             return this.value;
         }
 

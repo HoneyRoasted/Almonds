@@ -27,6 +27,10 @@ public class SolveResult {
         this.constraintTree = constraintTree;
         this.constraints = constraints;
     }
+    
+    public boolean success() {
+        return this.constraintTree.satisfied();
+    }
 
     public boolean satisfied(Constraint constraint) {
         return this.all().stream().anyMatch(tr -> tr.success() && tr.constraint().equals(constraint));
@@ -113,7 +117,7 @@ public class SolveResult {
         StringBuilder sb = new StringBuilder();
         sb.append("============= Solve Result, Tree Nodes: ").append(constraintTree.size())
                 .append(", Constraints: ").append(parents().size()).append("=============\n")
-                .append("SUCCESS: ").append(this.constraintTree.status() == ConstraintNode.Status.TRUE).append("\n")
+                .append("SUCCESS: ").append(this.constraintTree.status().asBoolean()).append("\n")
                 .append("TRACKED CONSTRAINTS:\n");
 
         this.parents().forEach(tr -> sb.append(tr.toString(useSimpleName)).append("\n"));

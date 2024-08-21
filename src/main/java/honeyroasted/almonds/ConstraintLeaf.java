@@ -113,7 +113,7 @@ public final class ConstraintLeaf implements ConstraintNode {
 
     @Override
     public void updateConstraints() {
-        this.constraint.setSuccess(this.status.value());
+        this.constraint.setSuccess(this.status.asBoolean());
     }
 
     public ConstraintLeaf setStatus(Status status) {

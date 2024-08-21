@@ -191,7 +191,7 @@ public final class ConstraintTree implements ConstraintNode {
 
     @Override
     public void updateConstraints() {
-        this.constraint.setSuccess(this.status().value());
+        this.constraint.setSuccess(this.status().asBoolean());
         this.children.forEach(ConstraintNode::updateConstraints);
     }
 
