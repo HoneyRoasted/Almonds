@@ -230,6 +230,11 @@ public final class ConstraintTree implements ConstraintNode {
     }
 
     @Override
+    public ConstraintTree expandInPlace(Operation defaultOp) {
+        return this;
+    }
+
+    @Override
     public ConstraintLeaf collapse() {
         return new ConstraintLeaf(this.parent, this.constraint, this.status());
     }

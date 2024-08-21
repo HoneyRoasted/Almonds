@@ -27,7 +27,7 @@ public class SolveResult {
         this.constraintTree = constraintTree;
         this.constraints = constraints;
     }
-    
+
     public boolean success() {
         return this.constraintTree.satisfied();
     }

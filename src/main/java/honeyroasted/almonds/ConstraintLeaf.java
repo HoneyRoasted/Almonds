@@ -52,6 +52,11 @@ public final class ConstraintLeaf implements ConstraintNode {
     }
 
     @Override
+    public ConstraintTree expandInPlace(Operation defaultOp) {
+        return this.expand(defaultOp, Collections.emptySet());
+    }
+
+    @Override
     public ConstraintLeaf collapse() {
         return this;
     }

@@ -61,6 +61,12 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void> pe
 
     ConstraintTree expand(Operation operation, Collection<? extends ConstraintNode> newChildren);
 
+    default ConstraintTree expandInPlace() {
+        return expandInPlace(Operation.OR);
+    }
+
+    ConstraintTree expandInPlace(Operation defaultOp);
+
     ConstraintLeaf collapse();
 
     ConstraintNode flattenedForm();
