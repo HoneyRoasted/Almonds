@@ -81,6 +81,17 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void> pe
         return Set.of(this);
     }
 
+    default ConstraintNode root(Operation operation) {
+        if (this.parent() != null && this.parent().operation() == operation){
+            return this.parent().root(operation);
+        }
+        return this;
+    }
+
+    default ConstraintNode root() {
+        return this.parent() != null ? this.parent().root() : this;
+    }
+
     ConstraintNode flattenedForm();
 
     ConstraintNode disjunctiveForm();
