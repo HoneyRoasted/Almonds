@@ -216,8 +216,7 @@ public final class ConstraintTree implements ConstraintNode {
         } else {
             ConstraintTree expand = new ConstraintTree(this.constraint, operation);
             if (this.parent != null) {
-                this.parent.attach(expand)
-                        .detach(this);
+                this.parent.detach(this).attach(expand);;
             }
 
             if (this.operation == Operation.AND) {

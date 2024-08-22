@@ -48,8 +48,7 @@ public final class ConstraintLeaf implements ConstraintNode {
     public ConstraintTree expand(Operation operation, Collection<? extends ConstraintNode> newChildren) {
         ConstraintTree tree = new ConstraintTree(this.constraint, operation);
         if (this.parent != null) {
-            this.parent.attach(tree)
-                    .detach(this);
+            this.parent.detach(this).attach(tree);
         }
         tree.attach(newChildren);
         return tree;
