@@ -5,9 +5,11 @@ import honeyroasted.collect.equivalence.Equivalence;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 
 public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void> permits ConstraintLeaf, ConstraintTree {
     Equivalence<ConstraintNode> STRUCTURAL = Equivalence.instancing(ConstraintNode.class, ConstraintLeaf.STRUCTURAL, ConstraintTree.STRUCTURAL);
@@ -71,14 +73,26 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void> pe
     ConstraintLeaf collapse();
 
     default Set<ConstraintNode> neighbors(Operation operation) {
+        return neighbors(operation, c -> true);
+    }
+
+    default Set<ConstraintNode> neighbors(Operation operation, Status status) {
+        return neighbors(operation, c -> c.status() == status);
+    }
+
+    default Set<ConstraintNode> neighbors(Operation operation, boolean status) {
+        return neighbors(operation, c -> c.satisfied() == status);
+    }
+
+    default Set<ConstraintNode> neighbors(Operation operation, Predicate<ConstraintNode> test) {
         if (this.parent() != null && this.parent().operation() == operation) {
             Set<ConstraintNode> result = new LinkedHashSet<>();
-            result.addAll(this.parent().children());
-            result.addAll(this.parent().neighbors(operation));
+            this.parent().children().stream().filter(test).forEach(result::add);
+            result.addAll(this.parent().neighbors(operation, test));
             return result;
         }
 
-        return Set.of(this);
+        return test.test(this) ? Set.of(this) : Collections.emptySet();
     }
 
     default ConstraintNode root(Operation operation) {
@@ -90,6 +104,10 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void> pe
 
     default ConstraintNode root() {
         return this.parent() != null ? this.parent().root() : this;
+    }
+
+    default ConstraintTree expandRoot(Operation operation) {
+        return root(operation).expandInPlace(operation);
     }
 
     ConstraintNode flattenedForm();

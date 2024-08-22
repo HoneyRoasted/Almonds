@@ -21,6 +21,11 @@ public class ConstraintMapperApplier implements ConstraintMapper {
     }
 
     @Override
+    public int arity() {
+        return -1;
+    }
+
+    @Override
     public boolean filter(ConstraintNode node) {
         return true;
     }
@@ -86,7 +91,7 @@ public class ConstraintMapperApplier implements ConstraintMapper {
             }
 
 
-        } while (!ConstraintNode.STRUCTURAL.equals(previous, current) && current.statusCouldChange());
+        } while (!ConstraintNode.STRUCTURAL.equals(previous, current));
 
         return current;
     }
@@ -94,7 +99,7 @@ public class ConstraintMapperApplier implements ConstraintMapper {
     private static void consume(Collection<ConstraintNode> processing, ConstraintMapper.Context context, ConstraintMapper mapper) {
         consumeSubsets(processing.stream().filter(mapper::filter).toList(), mapper.arity(), mapper.commutative(), arr -> {
             if (mapper.accepts(arr)) {
-                mapper.process(null, arr);
+                mapper.process(context, arr);
             }
         });
     }

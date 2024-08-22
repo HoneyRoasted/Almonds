@@ -29,6 +29,10 @@ public class ConstraintSolver {
     }
 
     public SolveResult solve() {
+        return this.solve(new ConstraintMapper.Context());
+    }
+
+    public SolveResult solve(ConstraintMapper.Context context) {
         List<TrackedConstraint> trackedConstraints = this.constraints.stream().map(Constraint::tracked).toList();
 
         ConstraintTree root = new ConstraintTree(Constraint.and().tracked(), ConstraintNode.Operation.AND);
@@ -36,7 +40,7 @@ public class ConstraintSolver {
 
         ConstraintNode current = root;
         for (ConstraintMapperApplier applier : this.appliers) {
-            current = applier.process(current);
+            current = applier.process(current, new ConstraintMapper.Context().inheritProperties(context));
         }
 
         return new SolveResult(current, trackedConstraints);
