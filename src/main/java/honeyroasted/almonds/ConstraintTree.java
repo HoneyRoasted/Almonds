@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public final class ConstraintTree implements ConstraintNode {
@@ -69,6 +70,7 @@ public final class ConstraintTree implements ConstraintNode {
 
     public ConstraintTree attach(ConstraintNode... nodes) {
         for (ConstraintNode node : nodes) {
+            if (node.parent() != null) node.parent().detach(nodes);
             node.setParent(this);
             this.children.add(node);
         }
@@ -77,6 +79,7 @@ public final class ConstraintTree implements ConstraintNode {
 
     public ConstraintTree attach(Collection<? extends ConstraintNode> nodes) {
         for (ConstraintNode node : nodes) {
+            if (node.parent() != null) node.parent().detach(nodes);
             node.setParent(this);
             this.children.add(node);
         }
@@ -199,6 +202,13 @@ public final class ConstraintTree implements ConstraintNode {
     }
 
     @Override
+    public Set<ConstraintLeaf> leaves() {
+        Set<ConstraintLeaf> leaves = new LinkedHashSet<>();
+        this.children().forEach(cn -> leaves.addAll(cn.leaves()));
+        return leaves;
+    }
+
+    @Override
     public ConstraintTree expand(Operation operation, Collection<? extends ConstraintNode> newChildren) {
         if (operation == this.operation) {
             this.attach(newChildren);
@@ -241,6 +251,17 @@ public final class ConstraintTree implements ConstraintNode {
     @Override
     public ConstraintLeaf collapse() {
         return new ConstraintLeaf(this.parent, this.constraint, this.status());
+    }
+
+    @Override
+    public void visit(Predicate<ConstraintNode> test, Predicate<ConstraintTree> snipper, Consumer<ConstraintNode> action) {
+        if (test.test(this)) {
+            action.accept(this);
+        }
+
+        if (!snipper.test(this)) {
+            this.children().forEach(cn -> cn.visit(test, snipper, action));
+        }
     }
 
     @Override

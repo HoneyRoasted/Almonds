@@ -8,6 +8,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 public final class ConstraintLeaf implements ConstraintNode {
     public static final Equivalence<ConstraintLeaf> STRUCTURAL = new Equivalence<>() {
@@ -59,6 +61,13 @@ public final class ConstraintLeaf implements ConstraintNode {
     @Override
     public ConstraintLeaf collapse() {
         return this;
+    }
+
+    @Override
+    public void visit(Predicate<ConstraintNode> test, Predicate<ConstraintTree> snipper, Consumer<ConstraintNode> action) {
+        if (test.test(this)) {
+            action.accept(this);
+        }
     }
 
     @Override
@@ -122,6 +131,11 @@ public final class ConstraintLeaf implements ConstraintNode {
     public ConstraintLeaf updateConstraints() {
         this.constraint.setSuccess(this.status.asBoolean());
         return this;
+    }
+
+    @Override
+    public Set<ConstraintLeaf> leaves() {
+        return Set.of(this);
     }
 
     public ConstraintLeaf setStatus(Status status) {

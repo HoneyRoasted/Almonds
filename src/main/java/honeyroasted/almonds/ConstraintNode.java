@@ -5,10 +5,10 @@ import honeyroasted.collect.equivalence.Equivalence;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void> permits ConstraintLeaf, ConstraintTree {
@@ -26,8 +26,8 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void> pe
 
     Status strictStatus();
 
-    default void overrideStatus(boolean status) {
-        this.overrideStatus(Status.fromBoolean(status));
+    default ConstraintNode overrideStatus(boolean status) {
+        return this.overrideStatus(Status.fromBoolean(status));
     }
 
     ConstraintNode overrideStatus(Status status);
@@ -49,6 +49,8 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void> pe
     TrackedConstraint trackedConstraint();
 
     ConstraintNode updateConstraints();
+
+    Set<ConstraintLeaf> leaves();
 
     default ConstraintTree expand(Operation operation, Constraint... newChildren) {
         return this.expand(operation, Arrays.stream(newChildren).map(c -> c.tracked(this.trackedConstraint()).createLeaf()).toList());
@@ -72,6 +74,16 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void> pe
 
     ConstraintLeaf collapse();
 
+    default void visit(Predicate<ConstraintNode> test, Consumer<ConstraintNode> action) {
+        visit(test, c -> false, action);
+    }
+
+    void visit(Predicate<ConstraintNode> test, Predicate<ConstraintTree> snipper, Consumer<ConstraintNode> action);
+
+    default void visitNeighbors(Operation operation, Predicate<ConstraintNode> test, Consumer<ConstraintNode> action) {
+        this.root(operation).visit(test, ct -> ct.operation() != operation, action);
+    }
+
     default Set<ConstraintNode> neighbors(Operation operation) {
         return neighbors(operation, c -> true);
     }
@@ -85,18 +97,13 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void> pe
     }
 
     default Set<ConstraintNode> neighbors(Operation operation, Predicate<ConstraintNode> test) {
-        if (this.parent() != null && this.parent().operation() == operation) {
-            Set<ConstraintNode> result = new LinkedHashSet<>();
-            this.parent().children().stream().filter(test).forEach(result::add);
-            result.addAll(this.parent().neighbors(operation, test));
-            return result;
-        }
-
-        return test.test(this) ? Set.of(this) : Collections.emptySet();
+        Set<ConstraintNode> neighbors = new LinkedHashSet<>();
+        visitNeighbors(operation, test, neighbors::add);
+        return neighbors;
     }
 
     default ConstraintNode root(Operation operation) {
-        if (this.parent() != null && this.parent().operation() == operation){
+        if (this.parent() != null && this.parent().operation() == operation) {
             return this.parent().root(operation);
         }
         return this;

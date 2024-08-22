@@ -18,8 +18,14 @@ public interface Constraint {
 
     List<?> parameters();
 
-    <T extends Constraint> T createNew(List<?> parameters);
-
+    default  <T extends Constraint> T createNew(List<?> parameters) {
+        try {
+            return (T) getClass().getConstructors()[0].newInstance(parameters.toArray());
+        } catch (ArrayIndexOutOfBoundsException | InstantiationException | IllegalAccessException |
+                 InvocationTargetException e) {
+            throw new IllegalStateException("Could not create new instance via reflection", e);
+        }
+    }
     default TrackedConstraint tracked() {
         return TrackedConstraint.of(this);
     }
@@ -180,15 +186,6 @@ public interface Constraint {
         public List<?> parameters() {
             return Collections.emptyList();
         }
-
-        @Override
-        public <T extends Constraint> T createNew(List<?> parameters) {
-            try {
-                return (T) getClass().getConstructors()[0].newInstance();
-            } catch (ArrayIndexOutOfBoundsException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
-                throw new IllegalStateException("Could not create new instance via reflection", e);
-            }
-        }
     }
 
     class And extends UniqueNamed {
@@ -258,7 +255,7 @@ public interface Constraint {
 
         @Override
         public String simpleName() {
-            return "(" + this.constraints.stream().map(Constraint::simpleName).collect(Collectors.joining(" " + this.operation.operator() +" ")) + ")";
+            return "(" + this.constraints.stream().map(Constraint::simpleName).collect(Collectors.joining(" " + this.operation.operator() + " ")) + ")";
         }
 
         @Override

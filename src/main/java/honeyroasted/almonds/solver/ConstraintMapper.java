@@ -80,8 +80,7 @@ public interface ConstraintMapper {
 
         @Override
         default boolean filter(ConstraintNode node) {
-            return node.statusCouldChange() &&
-                    type().isInstance(node.constraint()) &&
+            return type().isInstance(node.constraint()) &&
                     filter(node, (T) node.constraint());
         }
 
@@ -116,9 +115,8 @@ public interface ConstraintMapper {
 
         @Override
         default boolean filter(ConstraintNode node) {
-            return node.statusCouldChange() &&
-                    ((leftType().isInstance(node.constraint()) && filterLeft(node, (L) node.constraint())) ||
-                            (rightType().isInstance(node.constraint()) && filterRight(node, (R) node.constraint())));
+            return (leftType().isInstance(node.constraint()) && filterLeft(node, (L) node.constraint())) ||
+                    (rightType().isInstance(node.constraint()) && filterRight(node, (R) node.constraint()));
         }
 
         default Class<L> leftType() {
