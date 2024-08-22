@@ -12,8 +12,11 @@ public interface ConstraintMapper {
     String DISCARD_BRANCH = "honeyroasted.almonds.discard_branch";
     String REPLACE_BRANCH = "honeyroasted.almonds.replace_branch";
 
+    int ALL_BRANCH_NODES = -1;
+    int PARENT_BRANCH_NODE = 0;
+
     default int arity() {
-        return -1;
+        return ALL_BRANCH_NODES;
     }
 
     default boolean commutative() {

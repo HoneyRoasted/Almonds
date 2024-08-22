@@ -61,9 +61,9 @@ public class ConstraintMapperApplier implements ConstraintMapper {
 
                     for (ConstraintNode child : children) {
                         if (child instanceof ConstraintLeaf leaf) {
-                            consume(List.of(leaf), context, mapper);
+                            consume(leaf, List.of(leaf), context, mapper);
                         } else if (child instanceof ConstraintTree childTree) {
-                            consume(childTree.children(), context, mapper);
+                            consume(childTree, childTree.children(), context, mapper);
                         }
 
                         if (context.hasProperty(DISCARD_BRANCH)) {
@@ -74,7 +74,7 @@ public class ConstraintMapperApplier implements ConstraintMapper {
                         }
                     }
                 } else if (current instanceof ConstraintLeaf leaf) {
-                    consume(List.of(leaf), context, mapper);
+                    consume(leaf, List.of(leaf), context, mapper);
 
                     if (context.hasProperty(DISCARD_BRANCH)) {
                         leaf.setStatus(ConstraintNode.Status.FALSE);
@@ -93,12 +93,18 @@ public class ConstraintMapperApplier implements ConstraintMapper {
         return current;
     }
 
-    private static void consume(Collection<ConstraintNode> processing, ConstraintMapper.Context context, ConstraintMapper mapper) {
-        consumeSubsets(processing.stream().filter(mapper::filter).toList(), mapper.arity(), mapper.commutative(), arr -> {
-            if (mapper.accepts(arr)) {
-                mapper.process(context, arr);
+    private static void consume(ConstraintNode parent, Collection<ConstraintNode> processing, ConstraintMapper.Context context, ConstraintMapper mapper) {
+        if (mapper.arity() == ConstraintMapper.PARENT_BRANCH_NODE) {
+            if (mapper.filter(parent) && mapper.accepts(parent)) {
+                mapper.process(context, parent);
             }
-        }, ConstraintNode.class);
+        } else {
+            consumeSubsets(processing.stream().filter(mapper::filter).toList(), mapper.arity(), mapper.commutative(), arr -> {
+                if (mapper.accepts(arr)) {
+                    mapper.process(context, arr);
+                }
+            }, ConstraintNode.class);
+        }
     }
 
     private static <T> void consumeSubsets(List<T> processing, int size, boolean commutative, Consumer<T[]> baseCase, Class<T> component) {
