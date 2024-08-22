@@ -11,6 +11,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public interface Constraint {
+    Constraint TRUE = new True();
+    Constraint FALSE = new False();
 
     String simpleName();
 

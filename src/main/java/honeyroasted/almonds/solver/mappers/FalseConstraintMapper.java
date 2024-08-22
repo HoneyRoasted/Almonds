@@ -5,7 +5,7 @@ import honeyroasted.almonds.ConstraintNode;
 import honeyroasted.almonds.solver.ConstraintMapper;
 
 public class FalseConstraintMapper implements ConstraintMapper.Unary<Constraint.False> {
-    ConstraintMapper INSTANCE = new FalseConstraintMapper();
+    public static ConstraintMapper INSTANCE = new FalseConstraintMapper();
 
     @Override
     public void process(Context context, ConstraintNode node, Constraint.False constraint) {

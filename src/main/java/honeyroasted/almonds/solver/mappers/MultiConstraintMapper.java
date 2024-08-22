@@ -9,7 +9,7 @@ import java.util.LinkedHashSet;
 import java.util.stream.Collectors;
 
 public class MultiConstraintMapper implements ConstraintMapper.Unary<Constraint.Multi> {
-    ConstraintMapper INSTANCE = new MultiConstraintMapper();
+    public static ConstraintMapper INSTANCE = new MultiConstraintMapper();
 
     @Override
     public boolean filter(ConstraintNode node, Constraint.Multi constraint) {
