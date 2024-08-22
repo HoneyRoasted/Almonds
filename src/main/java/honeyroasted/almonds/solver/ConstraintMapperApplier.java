@@ -92,7 +92,7 @@ public class ConstraintMapperApplier implements ConstraintMapper {
             }
 
 
-        } while (!ConstraintNode.STRUCTURAL.equals(previous, current));
+        } while (!ConstraintNode.structural().equals(previous, current));
 
         return current;
     }

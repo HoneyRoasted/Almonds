@@ -128,11 +128,11 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void> pe
     boolean isLeaf();
 
     default boolean structuralEquals(Object other) {
-        return STRUCTURAL.equals(this, other);
+        return structural().equals(this, other);
     }
 
     default int structuralHashCode() {
-        return STRUCTURAL.hashCode(this);
+        return structural().hashCode(this);
     }
 
     void toString(List<String> building, boolean useSimpleName);
