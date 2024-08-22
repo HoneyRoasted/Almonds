@@ -143,7 +143,7 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void> pe
 
     @Override
     default ConstraintNode copy() {
-        return Copyable.super.copy();
+        return copy(null);
     }
 
     enum Operation {

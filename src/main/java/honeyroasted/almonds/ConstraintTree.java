@@ -70,7 +70,6 @@ public final class ConstraintTree implements ConstraintNode {
 
     public ConstraintTree attach(ConstraintNode... nodes) {
         for (ConstraintNode node : nodes) {
-            if (node.parent() != null) node.parent().detach(node);
             node.setParent(this);
             this.children.add(node);
         }
@@ -79,7 +78,6 @@ public final class ConstraintTree implements ConstraintNode {
 
     public ConstraintTree attach(Collection<? extends ConstraintNode> nodes) {
         for (ConstraintNode node : nodes) {
-            if (node.parent() != null) node.parent().detach(node);
             node.setParent(this);
             this.children.add(node);
         }
@@ -405,13 +403,16 @@ public final class ConstraintTree implements ConstraintNode {
     }
 
     @Override
+    public ConstraintTree copy() {
+        ConstraintTree copy = new ConstraintTree(this.constraint, this.operation);
+        this.children.forEach(cn -> copy.attach(cn.copy()));
+        return copy;
+    }
+
+    @Override
     public ConstraintTree copy(Void context) {
-        ConstraintTree copy = new ConstraintTree(null, this.constraint, this.operation);
-        this.children.forEach(cn -> {
-            ConstraintNode childCopy = cn.copy();
-            childCopy.setParent(copy);
-            copy.children().add(childCopy);
-        });
+        ConstraintTree copy = new ConstraintTree(this.constraint, this.operation);
+        this.children.forEach(cn -> copy.attach(cn.copy()));
         return copy;
     }
 }

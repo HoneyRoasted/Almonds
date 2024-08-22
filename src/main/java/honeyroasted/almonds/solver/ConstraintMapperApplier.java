@@ -49,8 +49,8 @@ public class ConstraintMapperApplier implements ConstraintMapper {
     }
 
     public ConstraintNode process(ConstraintNode node, Context context) {
-        ConstraintNode previous = node.copy();
-        ConstraintNode current = previous.disjunctiveForm().flattenedForm();
+        ConstraintNode previous;
+        ConstraintNode current = node.disjunctiveForm().flattenedForm();
 
         do {
             previous = current.copy();
@@ -70,7 +70,7 @@ public class ConstraintMapperApplier implements ConstraintMapper {
                             tree.detach(child);
                         } else if (context.hasProperty(REPLACE_BRANCH)) {
                             ConstraintNode replacement = context.property(REPLACE_BRANCH);
-                            tree.detach(child).attach(replacement.copy());
+                            tree.detach(child).attach(replacement);
                         }
                     }
                 } else if (current instanceof ConstraintLeaf leaf) {
@@ -79,19 +79,15 @@ public class ConstraintMapperApplier implements ConstraintMapper {
                     if (context.hasProperty(DISCARD_BRANCH)) {
                         leaf.setStatus(ConstraintNode.Status.FALSE);
                     } else if (context.hasProperty(REPLACE_BRANCH)) {
-                        ConstraintNode replacement = context.property(REPLACE_BRANCH);
-                        current = replacement.copy();
+                        current = context.property(REPLACE_BRANCH);
                     }
                 }
 
                 context.remove(DISCARD_BRANCH);
                 context.remove(REPLACE_BRANCH);
 
-                current.updateConstraints();
-                current = current.disjunctiveForm().flattenedForm();
+                current = current.updateConstraints().disjunctiveForm().flattenedForm();
             }
-
-
         } while (!ConstraintNode.structural().equals(previous, current));
 
         return current;

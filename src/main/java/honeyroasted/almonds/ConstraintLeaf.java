@@ -180,6 +180,6 @@ public final class ConstraintLeaf implements ConstraintNode {
 
     @Override
     public ConstraintLeaf copy(Void context) {
-        return new ConstraintLeaf(null, this.constraint, this.status);
+        return new ConstraintLeaf(this.constraint, this.status);
     }
 }
