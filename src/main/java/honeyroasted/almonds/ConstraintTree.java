@@ -70,7 +70,7 @@ public final class ConstraintTree implements ConstraintNode {
 
     public ConstraintTree attach(ConstraintNode... nodes) {
         for (ConstraintNode node : nodes) {
-            if (node.parent() != null) node.parent().detach(nodes);
+            if (node.parent() != null) node.parent().detach(node);
             node.setParent(this);
             this.children.add(node);
         }
@@ -79,7 +79,7 @@ public final class ConstraintTree implements ConstraintNode {
 
     public ConstraintTree attach(Collection<? extends ConstraintNode> nodes) {
         for (ConstraintNode node : nodes) {
-            if (node.parent() != null) node.parent().detach(nodes);
+            if (node.parent() != null) node.parent().detach(node);
             node.setParent(this);
             this.children.add(node);
         }
