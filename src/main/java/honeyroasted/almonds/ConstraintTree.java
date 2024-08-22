@@ -215,8 +215,10 @@ public final class ConstraintTree implements ConstraintNode {
             return this;
         } else {
             ConstraintTree expand = new ConstraintTree(this.constraint, operation);
-            this.parent.attach(expand)
-                    .detach(this);
+            if (this.parent != null) {
+                this.parent.attach(expand)
+                        .detach(this);
+            }
 
             if (this.operation == Operation.AND) {
                 newChildren.forEach(cn -> {
