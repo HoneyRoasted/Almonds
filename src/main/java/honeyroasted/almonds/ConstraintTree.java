@@ -214,7 +214,8 @@ public final class ConstraintTree implements ConstraintNode {
         } else {
             ConstraintTree expand = new ConstraintTree(this.constraint, operation);
             if (this.parent != null) {
-                this.parent.detach(this).attach(expand);;
+                this.parent.detach(this).attach(expand);
+                ;
             }
 
             if (this.operation == Operation.AND) {
@@ -265,27 +266,22 @@ public final class ConstraintTree implements ConstraintNode {
 
     @Override
     public ConstraintNode flattenedForm() {
-        Set<ConstraintNode> flattenedChildren = new LinkedHashSet<>();
-        this.flattenHelper(this, flattenedChildren);
-        return new ConstraintTree(null, this.constraint, this.operation, flattenedChildren);
-    }
+        ConstraintTree flat = new ConstraintTree(this.constraint, this.operation);
 
-    private void flattenHelper(ConstraintTree parent, Set<ConstraintNode> children) {
-        for (ConstraintNode child : this.children) {
-            if (child instanceof ConstraintTree tree) {
-                if (tree.operation == this.operation) {
-                    tree.flattenHelper(parent, children);
+        this.children.forEach(cn -> {
+            if (cn instanceof ConstraintTree tree) {
+                ConstraintNode flatChild = tree.flattenedForm();
+                if (tree.operation() == this.operation && flatChild instanceof ConstraintTree childTree) {
+                    flat.attach(childTree.children());
                 } else {
-                    ConstraintNode flat = tree.flattenedForm();
-                    flat.setParent(parent);
-                    children.add(flat);
+                    flat.attach(flatChild);
                 }
             } else {
-                ConstraintNode flat = child.copy();
-                flat.setParent(parent);
-                children.add(flat);
+                flat.attach(cn.copy());
             }
-        }
+        });
+
+        return flat;
     }
 
     @Override
