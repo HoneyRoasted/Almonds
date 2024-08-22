@@ -12,7 +12,9 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void> permits ConstraintLeaf, ConstraintTree {
-    Equivalence<ConstraintNode> STRUCTURAL = Equivalence.instancing(ConstraintNode.class, ConstraintLeaf.STRUCTURAL, ConstraintTree.STRUCTURAL);
+    static Equivalence<ConstraintNode> structural() {
+        return Equivalence.instancing(ConstraintNode.class, ConstraintLeaf.STRUCTURAL, ConstraintTree.STRUCTURAL);
+    }
 
     default boolean satisfied() {
         return this.status().asBoolean();

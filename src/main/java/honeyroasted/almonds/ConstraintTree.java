@@ -19,13 +19,13 @@ public final class ConstraintTree implements ConstraintNode {
         protected boolean doEquals(ConstraintTree left, ConstraintTree right) {
             return left.operation == right.operation &&
                     Objects.equals(left.constraint, right.constraint) &&
-                    ConstraintNode.STRUCTURAL.setEquals(left.children, right.children);
+                    ConstraintNode.structural().setEquals(left.children, right.children);
         }
 
         @Override
         protected int doHashCode(ConstraintTree val) {
             return Objects.hash(val.operation, val.constraint.hashCode(),
-                    ConstraintNode.STRUCTURAL.setHash(val.children));
+                    ConstraintNode.structural().setHash(val.children));
         }
     };
 
