@@ -90,7 +90,7 @@ public interface ConstraintMapper {
 
 
         default Class<T> type() {
-            return (Class<T>) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+            return (Class<T>) ((ParameterizedType) getClass().getGenericInterfaces()[0]).getActualTypeArguments()[0];
         }
 
         @Override
@@ -120,11 +120,11 @@ public interface ConstraintMapper {
         }
 
         default Class<L> leftType() {
-            return (Class<L>) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+            return (Class<L>) ((ParameterizedType) getClass().getGenericInterfaces()[0]).getActualTypeArguments()[0];
         }
 
         default Class<R> rightType() {
-            return (Class<R>) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[1];
+            return (Class<R>) ((ParameterizedType) getClass().getGenericInterfaces()[0]).getActualTypeArguments()[1];
         }
 
         @Override
