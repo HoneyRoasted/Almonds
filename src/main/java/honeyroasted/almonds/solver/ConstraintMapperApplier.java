@@ -5,6 +5,7 @@ import honeyroasted.almonds.ConstraintLeaf;
 import honeyroasted.almonds.ConstraintNode;
 import honeyroasted.almonds.ConstraintTree;
 
+import java.lang.reflect.Array;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -101,15 +102,15 @@ public class ConstraintMapperApplier implements ConstraintMapper {
             if (mapper.accepts(arr)) {
                 mapper.process(context, arr);
             }
-        });
+        }, ConstraintNode.class);
     }
 
-    private static <T> void consumeSubsets(List<T> processing, int size, boolean commutative, Consumer<T[]> baseCase) {
+    private static <T> void consumeSubsets(List<T> processing, int size, boolean commutative, Consumer<T[]> baseCase, Class<T> component) {
         if (size <= 0 || size == processing.size()) {
-            baseCase.accept((T[]) processing.toArray(Object[]::new));
+            baseCase.accept(processing.toArray(i -> (T[]) Array.newInstance(component, i)));
         } else if (size < processing.size()) {
-            T[] mem = (T[]) new Object[size];
-            T[] input = (T[]) processing.toArray(Object[]::new);
+            T[] mem = (T[]) Array.newInstance(component, size);
+            T[] input = processing.toArray(i -> (T[]) Array.newInstance(component, i));
             int[] subset = IntStream.range(0, size).toArray();
 
             consumeSubset(mem, input, subset, commutative, baseCase);
