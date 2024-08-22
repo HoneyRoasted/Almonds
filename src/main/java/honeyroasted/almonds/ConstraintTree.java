@@ -351,9 +351,9 @@ public final class ConstraintTree implements ConstraintNode {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        ConstraintTree tree = (ConstraintTree) o;
-        return Objects.equals(constraint, tree.constraint);
+        if (!(o instanceof ConstraintNode)) return false;
+        ConstraintNode node = (ConstraintNode) o;
+        return Objects.equals(constraint, node.trackedConstraint());
     }
 
     @Override

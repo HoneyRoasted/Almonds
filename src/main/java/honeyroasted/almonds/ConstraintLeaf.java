@@ -147,9 +147,9 @@ public final class ConstraintLeaf implements ConstraintNode {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        ConstraintLeaf leaf = (ConstraintLeaf) o;
-        return Objects.equals(constraint, leaf.constraint);
+        if (!(o instanceof ConstraintNode)) return false;
+        ConstraintNode node = (ConstraintNode) o;
+        return Objects.equals(constraint, node.trackedConstraint());
     }
 
     @Override
