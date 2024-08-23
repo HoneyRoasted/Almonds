@@ -5,19 +5,51 @@ import honeyroasted.collect.equivalence.Equivalence;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
-public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void> permits ConstraintLeaf, ConstraintTree {
+public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void>, Iterable<ConstraintNode> permits ConstraintLeaf, ConstraintTree {
     static Equivalence<ConstraintNode> structural() {
         return Equivalence.instancing(ConstraintNode.class, ConstraintLeaf.STRUCTURAL, ConstraintTree.STRUCTURAL);
     }
 
     default boolean satisfied() {
         return this.status().asBoolean();
+    }
+
+    @Override
+    default Iterator<ConstraintNode> iterator() {
+        return new ConstraintNodeVisitor(this);
+    }
+
+    default Iterator<ConstraintNode> iterator(Predicate<ConstraintNode> test, Predicate<ConstraintNode> snipper) {
+        return new ConstraintNodeVisitor(this, snipper, test);
+    }
+
+    @Override
+    default Spliterator<ConstraintNode> spliterator() {
+        return Spliterators.spliterator(this.iterator(), this.size(), Spliterator.SIZED);
+    }
+
+    default Spliterator<ConstraintNode> spliterator(Predicate<ConstraintNode> test, Predicate<ConstraintNode> snipper) {
+        return Spliterators.spliteratorUnknownSize(this.iterator(test, snipper), 0);
+    }
+
+
+    default Stream<ConstraintNode> stream() {
+        return StreamSupport.stream(this.spliterator(), false);
+    }
+
+    default Stream<ConstraintNode> stream(Predicate<ConstraintNode> test, Predicate<ConstraintNode> snipper) {
+        return StreamSupport.stream(this.spliterator(test, snipper), false);
     }
 
     Status status();

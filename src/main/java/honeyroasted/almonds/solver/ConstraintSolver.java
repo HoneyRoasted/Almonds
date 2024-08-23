@@ -12,6 +12,7 @@ import java.util.List;
 
 public class ConstraintSolver {
     private List<ConstraintMapperApplier> appliers;
+    private PropertySet context = new PropertySet();
 
     public ConstraintSolver(List<ConstraintMapperApplier> appliers) {
         this.appliers = appliers;
@@ -26,6 +27,12 @@ public class ConstraintSolver {
 
     public ConstraintSolver reset() {
         this.constraints.clear();
+        this.context.remove(Object.class);
+        return this;
+    }
+
+    public ConstraintSolver withContext(PropertySet context) {
+        this.context.inheritFrom(context);
         return this;
     }
 
@@ -41,7 +48,7 @@ public class ConstraintSolver {
 
         ConstraintNode current = root;
         for (ConstraintMapperApplier applier : this.appliers) {
-            current = applier.process(current, new PropertySet().inheritUnique(context));
+            current = applier.process(current, new PropertySet().inheritFrom(context).inheritFrom(this.context));
         }
 
         return new SolveResult(current, trackedConstraints);

@@ -32,11 +32,7 @@ public class Test {
         and.attach(eOrF);
 
 
-        System.out.println(and.toEquationString());
-        System.out.println("=================================================================");
-        System.out.println(and.disjunctiveForm().toEquationString());
-        System.out.println("=================================================================");
-        System.out.println(and.disjunctiveForm());
+        and.stream().forEach(cn -> System.out.println(cn.constraint()));
     }
 
 }

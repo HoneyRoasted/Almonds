@@ -69,31 +69,31 @@ public class ConstraintMapperApplier implements ConstraintMapper {
                     Set<ConstraintNode> children = new LinkedHashSet<>(tree.children());
 
                     for (ConstraintNode child : children) {
+                        PropertySet branchContext = new PropertySet().inheritFrom(context);
+
                         if (child instanceof ConstraintLeaf leaf) {
-                            consume(leaf, List.of(leaf), context, mapper);
+                            consume(leaf, List.of(leaf), branchContext, mapper);
                         } else if (child instanceof ConstraintTree childTree) {
-                            consume(childTree, childTree.children(), context, mapper);
+                            consume(childTree, childTree.children(), branchContext, mapper);
                         }
 
-                        if (context.has(DiscardBranch.class) && context.firstOr(DiscardBranch.class, null).value()) {
+                        if (branchContext.has(DiscardBranch.class) && branchContext.firstOr(DiscardBranch.class, null).value()) {
                             tree.detach(child);
-                        } else if (context.has(ReplaceBranch.class)) {
-                            ConstraintNode replacement = context.firstOr(ReplaceBranch.class, null).replacement();
+                        } else if (branchContext.has(ReplaceBranch.class)) {
+                            ConstraintNode replacement = branchContext.firstOr(ReplaceBranch.class, null).replacement();
                             tree.detach(child).attach(replacement);
                         }
                     }
                 } else if (current instanceof ConstraintLeaf leaf) {
-                    consume(leaf, List.of(leaf), context, mapper);
+                    PropertySet branchContext = new PropertySet().inheritFrom(context);
+                    consume(leaf, List.of(leaf), branchContext, mapper);
 
-                    if (context.has(DiscardBranch.class) && context.firstOr(DiscardBranch.class, null).value()) {
+                    if (branchContext.has(DiscardBranch.class) && branchContext.firstOr(DiscardBranch.class, null).value()) {
                         leaf.setStatus(ConstraintNode.Status.FALSE);
-                    } else if (context.has(ReplaceBranch.class)) {
-                        current = context.firstOr(ReplaceBranch.class, null).replacement();
+                    } else if (branchContext.has(ReplaceBranch.class)) {
+                        current = branchContext.firstOr(ReplaceBranch.class, null).replacement();
                     }
                 }
-
-                context.remove(DiscardBranch.class);
-                context.remove(ReplaceBranch.class);
 
                 current = current.updateConstraints().disjunctiveForm().flattenedForm();
             }
