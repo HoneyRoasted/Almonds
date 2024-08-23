@@ -28,12 +28,12 @@ public class ConstraintMapperApplier implements ConstraintMapper {
     }
 
     @Override
-    public boolean filter(ConstraintNode node) {
+    public boolean filter(PropertySet context, ConstraintNode node) {
         return true;
     }
 
     @Override
-    public boolean accepts(ConstraintNode... nodes) {
+    public boolean accepts(PropertySet context, ConstraintNode... nodes) {
         return true;
     }
 
@@ -104,12 +104,12 @@ public class ConstraintMapperApplier implements ConstraintMapper {
 
     private static void consume(ConstraintNode parent, Collection<ConstraintNode> processing, PropertySet context, ConstraintMapper mapper) {
         if (mapper.arity() == ConstraintMapper.PARENT_BRANCH_NODE) {
-            if (mapper.filter(parent) && mapper.accepts(parent)) {
+            if (mapper.filter(context, parent) && mapper.accepts(context, parent)) {
                 mapper.process(context, parent);
             }
         } else {
-            consumeSubsets(processing.stream().filter(mapper::filter).toList(), mapper.arity(), mapper.commutative(), arr -> {
-                if (mapper.accepts(arr)) {
+            consumeSubsets(processing.stream().filter(cn -> mapper.filter(context, cn)).toList(), mapper.arity(), mapper.commutative(), arr -> {
+                if (mapper.accepts(context, arr)) {
                     mapper.process(context, arr);
                 }
             }, ConstraintNode.class);

@@ -21,9 +21,9 @@ public interface ConstraintMapper {
         return true;
     }
 
-    boolean filter(ConstraintNode node);
+    boolean filter(PropertySet context, ConstraintNode node);
 
-    boolean accepts(ConstraintNode... nodes);
+    boolean accepts(PropertySet context, ConstraintNode... nodes);
 
     void process(PropertySet context, ConstraintNode... nodes);
 
@@ -34,12 +34,12 @@ public interface ConstraintMapper {
         }
 
         @Override
-        default boolean filter(ConstraintNode node) {
+        default boolean filter(PropertySet context, ConstraintNode node) {
             return type().isInstance(node.constraint()) &&
-                    filter(node, (T) node.constraint());
+                    filter(context, node, (T) node.constraint());
         }
 
-        default boolean filter(ConstraintNode node, T constraint) {
+        default boolean filter(PropertySet context, ConstraintNode node, T constraint) {
             return true;
         }
 
@@ -49,7 +49,7 @@ public interface ConstraintMapper {
         }
 
         @Override
-        default boolean accepts(ConstraintNode... nodes) {
+        default boolean accepts(PropertySet context, ConstraintNode... nodes) {
             return true;
         }
 
@@ -69,9 +69,9 @@ public interface ConstraintMapper {
         }
 
         @Override
-        default boolean filter(ConstraintNode node) {
-            return (leftType().isInstance(node.constraint()) && filterLeft(node, (L) node.constraint())) ||
-                    (rightType().isInstance(node.constraint()) && filterRight(node, (R) node.constraint()));
+        default boolean filter(PropertySet context, ConstraintNode node) {
+            return (leftType().isInstance(node.constraint()) && filterLeft(context, node, (L) node.constraint())) ||
+                    (rightType().isInstance(node.constraint()) && filterRight(context, node, (R) node.constraint()));
         }
 
         default Class<L> leftType() {
@@ -83,11 +83,11 @@ public interface ConstraintMapper {
         }
 
         @Override
-        default boolean accepts(ConstraintNode... nodes) {
+        default boolean accepts(PropertySet context, ConstraintNode... nodes) {
             if (leftType().isInstance(nodes[0].constraint()) && rightType().isInstance(nodes[1].constraint())) {
-                return filter(nodes[0], (L) nodes[0].constraint(), nodes[1], (R) nodes[1].constraint());
+                return filter(context, nodes[0], (L) nodes[0].constraint(), nodes[1], (R) nodes[1].constraint());
             } else if (this.commutative() && rightType().isInstance(nodes[0].constraint()) && leftType().isInstance(nodes[1].constraint())) {
-                return filter(nodes[1], (L) nodes[1].constraint(), nodes[0], (R) nodes[0].constraint());
+                return filter(context, nodes[1], (L) nodes[1].constraint(), nodes[0], (R) nodes[0].constraint());
             }
             return false;
         }
@@ -101,15 +101,15 @@ public interface ConstraintMapper {
             }
         }
 
-        default boolean filterLeft(ConstraintNode node, L constraint) {
+        default boolean filterLeft(PropertySet context, ConstraintNode node, L constraint) {
             return true;
         }
 
-        default boolean filterRight(ConstraintNode node, R constraint) {
+        default boolean filterRight(PropertySet context, ConstraintNode node, R constraint) {
             return true;
         }
 
-        default boolean filter(ConstraintNode leftNode, L leftConstraint, ConstraintNode rightNode, R rightConstraint) {
+        default boolean filter(PropertySet context, ConstraintNode leftNode, L leftConstraint, ConstraintNode rightNode, R rightConstraint) {
             return true;
         }
 

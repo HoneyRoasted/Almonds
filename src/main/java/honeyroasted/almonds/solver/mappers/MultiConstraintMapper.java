@@ -13,7 +13,7 @@ public class MultiConstraintMapper implements ConstraintMapper.Unary<Constraint.
     public static ConstraintMapper INSTANCE = new MultiConstraintMapper();
 
     @Override
-    public boolean filter(ConstraintNode node, Constraint.Multi constraint) {
+    public boolean filter(PropertySet context, ConstraintNode node, Constraint.Multi constraint) {
         return node.isLeaf() || (node instanceof ConstraintTree tree && tree.children().isEmpty());
     }
 
