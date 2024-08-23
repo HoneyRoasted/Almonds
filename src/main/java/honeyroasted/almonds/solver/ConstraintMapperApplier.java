@@ -4,6 +4,7 @@ import honeyroasted.almonds.Constraint;
 import honeyroasted.almonds.ConstraintLeaf;
 import honeyroasted.almonds.ConstraintNode;
 import honeyroasted.almonds.ConstraintTree;
+import honeyroasted.collect.property.PropertySet;
 
 import java.lang.reflect.Array;
 import java.util.Collection;
@@ -37,18 +38,26 @@ public class ConstraintMapperApplier implements ConstraintMapper {
     }
 
     @Override
-    public void process(Context context, ConstraintNode... nodes) {
+    public void process(PropertySet context, ConstraintNode... nodes) {
         ConstraintTree and = new ConstraintTree(Constraint.and().tracked(), ConstraintNode.Operation.AND);
         Stream.of(nodes).forEach(cn -> and.attach(cn.copy()));
-        process(and, new Context().inheritProperties(context));
-        context.attach(ConstraintMapper.REPLACE_BRANCH, and);
+        process(and, new PropertySet().inheritUnique(context));
+        context.attach(new ReplaceBranch(and));
+    }
+
+    public record ReplaceBranch(ConstraintNode replacement) {
+
+    }
+
+    public record DiscardBranch(boolean value) {
+
     }
 
     public ConstraintNode process(ConstraintNode node) {
-        return this.process(node, new Context());
+        return this.process(node, new PropertySet());
     }
 
-    public ConstraintNode process(ConstraintNode node, Context context) {
+    public ConstraintNode process(ConstraintNode node, PropertySet context) {
         ConstraintNode previous;
         ConstraintNode current = node.disjunctiveForm().flattenedForm();
 
@@ -66,25 +75,25 @@ public class ConstraintMapperApplier implements ConstraintMapper {
                             consume(childTree, childTree.children(), context, mapper);
                         }
 
-                        if (context.hasProperty(DISCARD_BRANCH)) {
+                        if (context.has(DiscardBranch.class) && context.firstOr(DiscardBranch.class, null).value()) {
                             tree.detach(child);
-                        } else if (context.hasProperty(REPLACE_BRANCH)) {
-                            ConstraintNode replacement = context.property(REPLACE_BRANCH);
+                        } else if (context.has(ReplaceBranch.class)) {
+                            ConstraintNode replacement = context.firstOr(ReplaceBranch.class, null).replacement();
                             tree.detach(child).attach(replacement);
                         }
                     }
                 } else if (current instanceof ConstraintLeaf leaf) {
                     consume(leaf, List.of(leaf), context, mapper);
 
-                    if (context.hasProperty(DISCARD_BRANCH)) {
+                    if (context.has(DiscardBranch.class) && context.firstOr(DiscardBranch.class, null).value()) {
                         leaf.setStatus(ConstraintNode.Status.FALSE);
-                    } else if (context.hasProperty(REPLACE_BRANCH)) {
-                        current = context.property(REPLACE_BRANCH);
+                    } else if (context.has(ReplaceBranch.class)) {
+                        current = context.firstOr(ReplaceBranch.class, null).replacement();
                     }
                 }
 
-                context.remove(DISCARD_BRANCH);
-                context.remove(REPLACE_BRANCH);
+                context.remove(DiscardBranch.class);
+                context.remove(ReplaceBranch.class);
 
                 current = current.updateConstraints().disjunctiveForm().flattenedForm();
             }
@@ -93,7 +102,7 @@ public class ConstraintMapperApplier implements ConstraintMapper {
         return current;
     }
 
-    private static void consume(ConstraintNode parent, Collection<ConstraintNode> processing, ConstraintMapper.Context context, ConstraintMapper mapper) {
+    private static void consume(ConstraintNode parent, Collection<ConstraintNode> processing, PropertySet context, ConstraintMapper mapper) {
         if (mapper.arity() == ConstraintMapper.PARENT_BRANCH_NODE) {
             if (mapper.filter(parent) && mapper.accepts(parent)) {
                 mapper.process(context, parent);

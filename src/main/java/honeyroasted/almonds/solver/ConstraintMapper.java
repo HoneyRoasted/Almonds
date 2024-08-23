@@ -2,11 +2,9 @@ package honeyroasted.almonds.solver;
 
 import honeyroasted.almonds.Constraint;
 import honeyroasted.almonds.ConstraintNode;
-import honeyroasted.almonds.ConstraintTree;
+import honeyroasted.collect.property.PropertySet;
 
 import java.lang.reflect.ParameterizedType;
-import java.util.HashMap;
-import java.util.Map;
 
 public interface ConstraintMapper {
     String DISCARD_BRANCH = "honeyroasted.almonds.discard_branch";
@@ -27,53 +25,7 @@ public interface ConstraintMapper {
 
     boolean accepts(ConstraintNode... nodes);
 
-    void process(Context context, ConstraintNode... nodes);
-
-    class Context {
-        private Map<String, Object> global = new HashMap<>();
-
-        public Context inheritProperties(Context other) {
-            other.global.forEach((k, v) -> this.global.putIfAbsent(k, v));
-            return this;
-        }
-
-        public Context attach(String name, Object value) {
-            this.global.put(name, value);
-            return this;
-        }
-
-        public Context remove(String name) {
-            this.global.remove(name);
-            return this;
-        }
-
-        public boolean hasProperty(String name) {
-            return this.global.containsKey(name);
-        }
-
-        public <T> T property(String name) {
-            return (T) this.global.get(name);
-        }
-
-        public Context and(ConstraintNode current, ConstraintNode... toAdd) {
-            if (current.parent() != null && current.parent().operation() == ConstraintNode.Operation.AND) {
-                current.parent().attach(toAdd);
-            } else {
-                ConstraintTree parent = current.parent();
-
-                ConstraintTree expanded = new ConstraintTree(Constraint.and().tracked(), ConstraintNode.Operation.AND);
-                expanded.attach(current);
-                expanded.attach(toAdd);
-
-                if (parent != null) {
-                    parent.children().remove(current);
-                    parent.attach(expanded);
-                }
-            }
-
-            return this;
-        }
-    }
+    void process(PropertySet context, ConstraintNode... nodes);
 
     interface Unary<T extends Constraint> extends ConstraintMapper {
         @Override
@@ -102,11 +54,11 @@ public interface ConstraintMapper {
         }
 
         @Override
-        default void process(Context context, ConstraintNode... nodes) {
+        default void process(PropertySet context, ConstraintNode... nodes) {
             process(context, nodes[0], (T) nodes[0].constraint());
         }
 
-        void process(Context context, ConstraintNode node, T constraint);
+        void process(PropertySet context, ConstraintNode node, T constraint);
     }
 
     interface Binary<L extends Constraint, R extends Constraint> extends ConstraintMapper {
@@ -141,7 +93,7 @@ public interface ConstraintMapper {
         }
 
         @Override
-        default void process(Context context, ConstraintNode... nodes) {
+        default void process(PropertySet context, ConstraintNode... nodes) {
             if (leftType().isInstance(nodes[0].constraint()) && rightType().isInstance(nodes[1].constraint())) {
                 process(context, nodes[0], (L) nodes[0].constraint(), nodes[1], (R) nodes[1].constraint());
             } else if (this.commutative() && rightType().isInstance(nodes[0].constraint()) && leftType().isInstance(nodes[1].constraint())) {
@@ -161,7 +113,7 @@ public interface ConstraintMapper {
             return true;
         }
 
-        void process(Context context, ConstraintNode leftNode, L leftConstraint, ConstraintNode rightNode, R rightConstraint);
+        void process(PropertySet context, ConstraintNode leftNode, L leftConstraint, ConstraintNode rightNode, R rightConstraint);
 
     }
 
