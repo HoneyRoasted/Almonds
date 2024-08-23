@@ -65,9 +65,9 @@ public class ConstraintMapperApplier implements ConstraintMapper {
             previous = current.copy();
 
             for (ConstraintMapper mapper : this.mappers) {
+                boolean restart = false;
                 if (current instanceof ConstraintTree tree) {
                     Set<ConstraintNode> children = new LinkedHashSet<>(tree.children());
-
                     for (ConstraintNode child : children) {
                         PropertySet branchContext = new PropertySet().inheritFrom(context);
 
@@ -79,9 +79,13 @@ public class ConstraintMapperApplier implements ConstraintMapper {
 
                         if (branchContext.has(DiscardBranch.class) && branchContext.firstOr(DiscardBranch.class, null).value()) {
                             tree.detach(child);
+                            restart = true;
+                            break;
                         } else if (branchContext.has(ReplaceBranch.class)) {
-                            ConstraintNode replacement = branchContext.firstOr(ReplaceBranch.class, null).replacement();
+                            ConstraintNode replacement = branchContext.firstOr(ReplaceBranch.class, null).replacement().copy();
                             tree.detach(child).attach(replacement);
+                            restart = true;
+                            break;
                         }
                     }
                 } else if (current instanceof ConstraintLeaf leaf) {
@@ -90,16 +94,19 @@ public class ConstraintMapperApplier implements ConstraintMapper {
 
                     if (branchContext.has(DiscardBranch.class) && branchContext.firstOr(DiscardBranch.class, null).value()) {
                         leaf.setStatus(ConstraintNode.Status.FALSE);
+                        restart = true;
                     } else if (branchContext.has(ReplaceBranch.class)) {
-                        current = branchContext.firstOr(ReplaceBranch.class, null).replacement();
+                        current = branchContext.firstOr(ReplaceBranch.class, null).replacement().copy();
+                        restart = true;
                     }
                 }
 
-                current = current.updateConstraints().disjunctiveForm().flattenedForm();
+                current = current.disjunctiveForm().flattenedForm();
+                if (restart) break;
             }
         } while (!ConstraintNode.structural().equals(previous, current));
 
-        return current;
+        return current.copy();
     }
 
     private static void consume(ConstraintNode parent, Collection<ConstraintNode> processing, PropertySet context, ConstraintMapper mapper) {
