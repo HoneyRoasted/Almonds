@@ -1,11 +1,14 @@
 package honeyroasted.almonds.solver;
 
 import honeyroasted.almonds.Constraint;
+import honeyroasted.almonds.ConstraintLeaf;
 import honeyroasted.almonds.ConstraintNode;
+import honeyroasted.almonds.ConstraintTree;
 import honeyroasted.almonds.TrackedConstraint;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -18,13 +21,9 @@ public class SolveResult {
 
     private Set<TrackedConstraint> parents;
     private Set<TrackedConstraint> all;
-    private Set<TrackedConstraint> leaves;
-
-    private Map<Predicate<TrackedConstraint>, Set<TrackedConstraint>> filterCache = new IdentityHashMap<>();
-    private Map<Predicate<TrackedConstraint>, Set<TrackedConstraint>> filterParentsCache = new IdentityHashMap<>();
 
     public SolveResult(ConstraintNode constraintTree, List<TrackedConstraint> constraints) {
-        this.constraintTree = constraintTree;
+        this.constraintTree = constraintTree.disjunctiveForm().flattenedForm();
         this.constraints = constraints;
     }
 
@@ -32,11 +31,19 @@ public class SolveResult {
         return this.constraintTree.satisfied();
     }
 
-    public boolean satisfied(Constraint constraint) {
-        return this.all().stream().anyMatch(tr -> tr.success() && tr.constraint().equals(constraint));
+    public Set<ConstraintNode> validBranches() {
+        if (this.constraintTree instanceof ConstraintTree tree) {
+            return tree.children().stream().filter(ConstraintNode::satisfied).collect(Collectors.toCollection(LinkedHashSet::new));
+        }
+
+        return Set.of(this.constraintTree);
     }
 
-    public Set<TrackedConstraint> parents() {
+    public boolean satisfied(Constraint constraint) {
+        return this.constraintTree.stream().anyMatch(cn -> cn.constraint().equals(constraint) && cn.satisfied());
+    }
+
+    public Set<TrackedConstraint> parentTrackedConstraints() {
         if (this.parents == null) {
             Set<TrackedConstraint> parents = Collections.newSetFromMap(new IdentityHashMap<>());
             this.constraints.forEach(tr -> parentsImpl(tr, parents));
@@ -53,27 +60,10 @@ public class SolveResult {
         }
     }
 
-    public Set<TrackedConstraint> leaves() {
-        if (this.leaves == null) {
-            Set<TrackedConstraint> leaves = Collections.newSetFromMap(new IdentityHashMap<>());
-            this.constraints.forEach(tr -> leavesImpl(tr, leaves));
-            this.leaves = Collections.unmodifiableSet(leaves);
-        }
-        return this.leaves;
-    }
-
-    private void leavesImpl(TrackedConstraint constraint, Set<TrackedConstraint> building) {
-        if (constraint.children().isEmpty()) {
-            building.add(constraint);
-        } else {
-            constraint.children().forEach(tr -> leavesImpl(tr, building));
-        }
-    }
-
-    public Set<TrackedConstraint> all() {
+    public Set<TrackedConstraint> allTrackedConstraints() {
         if (this.all == null) {
             Set<TrackedConstraint> all = Collections.newSetFromMap(new IdentityHashMap<>());
-            this.parents().forEach(tr -> allImpl(tr, all));
+            this.parentTrackedConstraints().forEach(tr -> allImpl(tr, all));
             this.all = Collections.unmodifiableSet(all);
         }
         return this.all;
@@ -84,30 +74,6 @@ public class SolveResult {
         constraint.children().forEach(tr -> allImpl(constraint, building));
     }
 
-    public Set<TrackedConstraint> filter(Predicate<TrackedConstraint> fn) {
-        return filterCache.computeIfAbsent(fn, k -> Collections.unmodifiableSet(this.all().stream().filter(fn).collect(Collectors.toCollection(() -> Collections.newSetFromMap(new IdentityHashMap<>())))));
-    }
-
-    public Set<TrackedConstraint> filterParents(Predicate<TrackedConstraint> fn) {
-        return filterParentsCache.computeIfAbsent(fn, k -> Collections.unmodifiableSet(this.parents().stream().filter(fn).collect(Collectors.toCollection(() -> Collections.newSetFromMap(new IdentityHashMap<>())))));
-    }
-
-    public Set<TrackedConstraint> satisfied() {
-        return this.filterParents(TrackedConstraint::success);
-    }
-
-    public Set<TrackedConstraint> unsatisfied() {
-        return this.filterParents(tr -> !tr.success());
-    }
-
-    public Set<TrackedConstraint> allSatisfied() {
-        return this.filter(TrackedConstraint::success);
-    }
-
-    public Set<TrackedConstraint> allUnsatisfied() {
-        return this.filter(tr -> !tr.success());
-    }
-
     @Override
     public String toString() {
         return this.toString(false);
@@ -116,15 +82,14 @@ public class SolveResult {
     public String toString(boolean useSimpleName) {
         StringBuilder sb = new StringBuilder();
         sb.append("============= Solve Result, Tree Nodes: ").append(constraintTree.size())
-                .append(", Constraints: ").append(parents().size())
+                .append(", Constraints: ").append(parentTrackedConstraints().size())
                 .append(", Success: ").append(this.constraintTree.status().asBoolean()).append(" =============\n")
-                .append("########## TRACKED CONSTRAINTS ##########\n");
+                .append("########## CONSTRAINT TREE ##########\n")
+                .append(constraintTree.toString(useSimpleName))
+                .append("\n");
 
-        this.parents().forEach(tr -> sb.append(tr.toString(useSimpleName)).append("\n"));
-
-        sb.append("\n")
-                .append("########## CONSTRAINT TREE: ##########\n")
-                .append(constraintTree.toString(useSimpleName));
+        sb.append("########## TRACKED CONSTRAINTS ##########\n");
+        this.parentTrackedConstraints().forEach(tr -> sb.append(tr.toString(useSimpleName)).append("\n"));
 
 
         return sb.toString();

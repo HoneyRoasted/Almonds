@@ -193,13 +193,6 @@ public final class ConstraintTree implements ConstraintNode {
     }
 
     @Override
-    public ConstraintTree updateConstraints() {
-        this.constraint.setSuccess(this.status().asBoolean());
-        this.children.forEach(ConstraintNode::updateConstraints);
-        return this;
-    }
-
-    @Override
     public Set<ConstraintLeaf> leaves() {
         Set<ConstraintLeaf> leaves = new LinkedHashSet<>();
         this.children().forEach(cn -> leaves.addAll(cn.leaves()));

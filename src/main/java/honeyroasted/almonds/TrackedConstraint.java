@@ -6,39 +6,38 @@ import honeyroasted.collect.property.PropertySet;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 public class TrackedConstraint {
     public static final Equivalence<TrackedConstraint> STRUCTURAL = new Equivalence<>() {
         @Override
         protected boolean doEquals(TrackedConstraint left, TrackedConstraint right) {
-            return left.success == right.success && Objects.equals(left.constraint, right.constraint) && left.parents.size() == right.parents.size() && listEquals(left.children, right.children);
+            return Objects.equals(left.constraint, right.constraint) && left.parents.size() == right.parents.size() && setEquals(left.children, right.children);
         }
 
         @Override
         protected int doHashCode(TrackedConstraint val) {
-            return Objects.hash(val.constraint, val.success, listHash(val.children), val.parents.size());
+            return Objects.hash(val.constraint, setHash(val.children), val.parents.size());
         }
     };
 
     private Constraint constraint;
-    private boolean success;
-
-    private List<TrackedConstraint> parents;
-    private List<TrackedConstraint> children;
+    private Set<TrackedConstraint> parents;
+    private Set<TrackedConstraint> children;
 
     private PropertySet metadata = new PropertySet();
 
-    public TrackedConstraint(Constraint constraint, boolean success, List<TrackedConstraint> parents, List<TrackedConstraint> children) {
+    public TrackedConstraint(Constraint constraint, boolean success, Set<TrackedConstraint> parents, Set<TrackedConstraint> children) {
         this.constraint = constraint;
-        this.success = success;
         this.parents = parents;
         this.children = children;
     }
 
     public TrackedConstraint(Constraint constraint) {
-        this(constraint, false, new ArrayList<>(), new ArrayList<>());
+        this(constraint, false, new LinkedHashSet<>(), new LinkedHashSet<>());
     }
 
     public static TrackedConstraint of(Constraint constraint) {
@@ -75,16 +74,7 @@ public class TrackedConstraint {
         return this;
     }
 
-    public boolean success() {
-        return this.success;
-    }
-
-    public TrackedConstraint setSuccess(boolean success) {
-        this.success = success;
-        return this;
-    }
-
-    public List<TrackedConstraint> parents() {
+    public Set<TrackedConstraint> parents() {
         return this.parents;
     }
 
@@ -93,12 +83,12 @@ public class TrackedConstraint {
         return this;
     }
 
-    public TrackedConstraint setParents(List<TrackedConstraint> parents) {
+    public TrackedConstraint setParents(Set<TrackedConstraint> parents) {
         this.parents = parents;
         return this;
     }
 
-    public List<TrackedConstraint> children() {
+    public Set<TrackedConstraint> children() {
         return this.children;
     }
 
@@ -107,7 +97,7 @@ public class TrackedConstraint {
         return this;
     }
 
-    public TrackedConstraint setChildren(List<TrackedConstraint> children) {
+    public TrackedConstraint setChildren(Set<TrackedConstraint> children) {
         this.children = children;
         return this;
     }
@@ -150,7 +140,6 @@ public class TrackedConstraint {
 
     public void toString(List<String> building, boolean useSimpleName) {
         building.add("Condition: " + (useSimpleName ? this.constraint().simpleName() : this.constraint().toString()));
-        building.add("Satisfied: " + this.success);
 
         if (!this.children.isEmpty()) {
             building.add("Children: " + this.children.size());

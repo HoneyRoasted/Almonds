@@ -129,12 +129,6 @@ public final class ConstraintLeaf implements ConstraintNode {
     }
 
     @Override
-    public ConstraintLeaf updateConstraints() {
-        this.constraint.setSuccess(this.status.asBoolean());
-        return this;
-    }
-
-    @Override
     public Set<ConstraintLeaf> leaves() {
         return Set.of(this);
     }

@@ -80,9 +80,11 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void>, I
         return trackedConstraint().constraint();
     }
 
-    TrackedConstraint trackedConstraint();
+    default boolean satisfied(Constraint constraint) {
+        return this.stream().anyMatch(cn -> cn.constraint().equals(constraint) && cn.satisfied());
+    }
 
-    ConstraintNode updateConstraints();
+    TrackedConstraint trackedConstraint();
 
     Set<ConstraintLeaf> leaves();
 
