@@ -12,6 +12,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -56,6 +57,10 @@ public class ConstraintMapperApplier implements ConstraintMapper {
 
     }
 
+    public record RestartProcessing(boolean value) {
+
+    }
+
     public ConstraintNode process(ConstraintNode node) {
         return this.process(node, new PropertySet());
     }
@@ -80,13 +85,16 @@ public class ConstraintMapperApplier implements ConstraintMapper {
                             consume(childTree, childTree.children(), branchContext, mapper);
                         }
 
-                        if (branchContext.has(DiscardBranch.class) && branchContext.firstOr(DiscardBranch.class, null).value()) {
+                        if (branchContext.has(DiscardBranch.class) && branchContext.first(DiscardBranch.class).get().value()) {
                             tree.detach(child);
                             restart = true;
                             break;
                         } else if (branchContext.has(ReplaceBranch.class)) {
-                            ConstraintNode replacement = branchContext.firstOr(ReplaceBranch.class, null).replacement().copy();
+                            ConstraintNode replacement = branchContext.first(ReplaceBranch.class).get().replacement().copy();
                             tree.detach(child).attach(replacement);
+                            restart = true;
+                            break;
+                        } else if (branchContext.has(RestartProcessing.class) && branchContext.first(RestartProcessing.class).get().value) {
                             restart = true;
                             break;
                         }
@@ -95,11 +103,13 @@ public class ConstraintMapperApplier implements ConstraintMapper {
                     PropertySet branchContext = new PropertySet().inheritFrom(context);
                     consume(leaf, List.of(leaf), branchContext, mapper);
 
-                    if (branchContext.has(DiscardBranch.class) && branchContext.firstOr(DiscardBranch.class, null).value()) {
+                    if (branchContext.has(DiscardBranch.class) && branchContext.first(DiscardBranch.class).get().value()) {
                         leaf.setStatus(ConstraintNode.Status.FALSE);
                         restart = true;
                     } else if (branchContext.has(ReplaceBranch.class)) {
-                        current = branchContext.firstOr(ReplaceBranch.class, null).replacement().copy();
+                        current = branchContext.first(ReplaceBranch.class).get().replacement().copy();
+                        restart = true;
+                    } else if (branchContext.has(RestartProcessing.class) && branchContext.first(RestartProcessing.class).get().value) {
                         restart = true;
                     }
                 }
@@ -112,6 +122,12 @@ public class ConstraintMapperApplier implements ConstraintMapper {
         return current.copy();
     }
 
+    private static boolean shouldRestart(PropertySet context) {
+        return context.has(ReplaceBranch.class) ||
+                (context.has(DiscardBranch.class) && context.first(DiscardBranch.class).get().value()) ||
+                (context.has(RestartProcessing.class) && context.first(RestartProcessing.class).get().value);
+    }
+
     private static void consume(ConstraintNode parent, Collection<ConstraintNode> processing, PropertySet context, ConstraintMapper mapper) {
         if (mapper.arity() == ConstraintMapper.PARENT_BRANCH_NODE) {
             if (mapper.filter(context, parent) && mapper.accepts(context, parent)) {
@@ -122,51 +138,57 @@ public class ConstraintMapperApplier implements ConstraintMapper {
                 if (mapper.accepts(context, arr)) {
                     mapper.process(context, arr);
                 }
-            }, ConstraintNode.class);
+            }, ConstraintNode.class, () -> shouldRestart(context));
         }
     }
 
-    private static <T> void consumeSubsets(List<T> processing, int size, boolean commutative, Consumer<T[]> baseCase, Class<T> component) {
-        if (size <= 0 || size == processing.size()) {
-            baseCase.accept(processing.toArray(i -> (T[]) Array.newInstance(component, i)));
-        } else if (size < processing.size()) {
-            T[] mem = (T[]) Array.newInstance(component, size);
-            T[] input = processing.toArray(i -> (T[]) Array.newInstance(component, i));
-            int[] subset = IntStream.range(0, size).toArray();
+    private static <T> void consumeSubsets(List<T> processing, int size, boolean commutative, Consumer<T[]> baseCase, Class<T> component, Supplier<Boolean> breaker) {
+        if (!breaker.get()) {
+            if (size <= 0 || size == processing.size()) {
+                baseCase.accept(processing.toArray(i -> (T[]) Array.newInstance(component, i)));
+            } else if (size < processing.size()) {
+                T[] mem = (T[]) Array.newInstance(component, size);
+                T[] input = processing.toArray(i -> (T[]) Array.newInstance(component, i));
+                int[] subset = IntStream.range(0, size).toArray();
 
-            consumeSubset(mem, input, subset, commutative, baseCase);
-            while (true) {
-                int i;
-                for (i = size - 1; i >= 0 && subset[i] == input.length - size + i; i--) ;
-                if (i < 0) break;
+                consumeSubset(mem, input, subset, commutative, baseCase, breaker);
+                while (true) {
+                    int i;
+                    for (i = size - 1; i >= 0 && subset[i] == input.length - size + i; i--) ;
+                    if (i < 0) break;
 
-                subset[i]++;
-                for (++i; i < size; i++) {
-                    subset[i] = subset[i - 1] + 1;
+                    subset[i]++;
+                    for (++i; i < size; i++) {
+                        subset[i] = subset[i - 1] + 1;
+                    }
+                    consumeSubset(mem, input, subset, commutative, baseCase, breaker);
                 }
-                consumeSubset(mem, input, subset, commutative, baseCase);
             }
         }
     }
 
-    private static <T> void consumeSubset(T[] mem, T[] input, int[] subset, boolean commutative, Consumer<T[]> baseCase) {
-        if (commutative) {
-            copyMem(mem, input, subset);
-            baseCase.accept(mem);
-        } else {
-            permuteAndConsumeSubset(mem, input, subset, 0, subset.length - 1, baseCase);
+    private static <T> void consumeSubset(T[] mem, T[] input, int[] subset, boolean commutative, Consumer<T[]> baseCase, Supplier<Boolean> breaker) {
+        if (!breaker.get()) {
+            if (commutative) {
+                copyMem(mem, input, subset);
+                baseCase.accept(mem);
+            } else {
+                permuteAndConsumeSubset(mem, input, subset, 0, subset.length - 1, baseCase, breaker);
+            }
         }
     }
 
-    private static <T> void permuteAndConsumeSubset(T[] mem, T[] input, int[] subset, int l, int h, Consumer<T[]> baseCase) {
-        if (l == h) {
-            copyMem(mem, input, subset);
-            baseCase.accept(mem);
-        } else {
-            for (int i = l; i <= h; i++) {
-                swap(subset, l, i);
-                permuteAndConsumeSubset(mem, input, subset, l + 1, h, baseCase);
-                swap(subset, l, i);
+    private static <T> void permuteAndConsumeSubset(T[] mem, T[] input, int[] subset, int l, int h, Consumer<T[]> baseCase, Supplier<Boolean> breaker) {
+        if (!breaker.get()) {
+            if (l == h) {
+                copyMem(mem, input, subset);
+                baseCase.accept(mem);
+            } else {
+                for (int i = l; i <= h && breaker.get(); i++) {
+                    swap(subset, l, i);
+                    permuteAndConsumeSubset(mem, input, subset, l + 1, h, baseCase, breaker);
+                    swap(subset, l, i);
+                }
             }
         }
     }
