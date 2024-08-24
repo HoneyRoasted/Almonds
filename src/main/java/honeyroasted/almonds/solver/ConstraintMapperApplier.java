@@ -39,10 +39,13 @@ public class ConstraintMapperApplier implements ConstraintMapper {
 
     @Override
     public void process(PropertySet context, ConstraintNode... nodes) {
-        ConstraintTree and = new ConstraintTree(Constraint.and().tracked(), ConstraintNode.Operation.AND);
-        Stream.of(nodes).forEach(cn -> and.attach(cn.copy()));
-        process(and, new PropertySet().inheritUnique(context));
-        context.attach(new ReplaceBranch(and));
+        if (nodes.length > 1) {
+            ConstraintTree tree = new ConstraintTree(Constraint.solve().tracked(), ConstraintNode.Operation.AND);
+            Stream.of(nodes).forEach(cn -> tree.attach(cn.copy()));
+            context.attach(new ReplaceBranch(process(tree, new PropertySet().inheritUnique(context))));
+        } else {
+            context.attach(new ReplaceBranch(process(nodes[0].copy(), new PropertySet().inheritUnique(context))));
+        }
     }
 
     public record ReplaceBranch(ConstraintNode replacement) {

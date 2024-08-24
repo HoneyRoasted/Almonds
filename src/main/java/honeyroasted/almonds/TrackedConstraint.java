@@ -30,14 +30,14 @@ public class TrackedConstraint {
 
     private PropertySet metadata = new PropertySet();
 
-    public TrackedConstraint(Constraint constraint, boolean success, Set<TrackedConstraint> parents, Set<TrackedConstraint> children) {
+    public TrackedConstraint(Constraint constraint, Set<TrackedConstraint> parents, Set<TrackedConstraint> children) {
         this.constraint = constraint;
         this.parents = parents;
         this.children = children;
     }
 
     public TrackedConstraint(Constraint constraint) {
-        this(constraint, false, new LinkedHashSet<>(), new LinkedHashSet<>());
+        this(constraint, new LinkedHashSet<>(), new LinkedHashSet<>());
     }
 
     public static TrackedConstraint of(Constraint constraint) {
