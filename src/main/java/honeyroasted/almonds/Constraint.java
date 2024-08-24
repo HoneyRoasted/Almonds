@@ -48,6 +48,10 @@ public interface Constraint {
         return new Multi(operation, children);
     }
 
+    static Constraint solve() {
+        return new Solve();
+    }
+
     static Constraint and() {
         return new And();
     }
@@ -185,6 +189,12 @@ public interface Constraint {
         @Override
         public List<?> parameters() {
             return Collections.emptyList();
+        }
+    }
+
+    class Solve extends UniqueNamed {
+        public Solve() {
+            super("Solve child constraints");
         }
     }
 

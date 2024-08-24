@@ -43,7 +43,7 @@ public class ConstraintSolver {
     public SolveResult solve(PropertySet context) {
         List<TrackedConstraint> trackedConstraints = this.constraints.stream().map(Constraint::tracked).toList();
 
-        ConstraintTree root = new ConstraintTree(Constraint.and().tracked(), ConstraintNode.Operation.AND);
+        ConstraintTree root = new ConstraintTree(Constraint.solve().tracked(), ConstraintNode.Operation.AND);
         trackedConstraints.forEach(tr -> root.attach(tr.createLeaf()));
 
         ConstraintNode current = root;
@@ -51,7 +51,7 @@ public class ConstraintSolver {
             current = applier.process(current, new PropertySet().inheritFrom(context).inheritFrom(this.context));
         }
 
-        return new SolveResult(current, trackedConstraints);
+        return new SolveResult(current.copy(), trackedConstraints);
     }
 
 }
