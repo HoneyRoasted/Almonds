@@ -68,7 +68,7 @@ public class SolveResult {
 
     private void allImpl(TrackedConstraint constraint, Set<TrackedConstraint> building) {
         building.add(constraint);
-        constraint.children().forEach(tr -> allImpl(constraint, building));
+        constraint.children().forEach(tr -> allImpl(tr, building));
     }
 
     @Override
