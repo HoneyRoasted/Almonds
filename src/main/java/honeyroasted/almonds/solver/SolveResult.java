@@ -78,7 +78,7 @@ public class SolveResult {
     public String toString(boolean useSimpleName) {
         StringBuilder sb = new StringBuilder();
         sb.append("============= Solve Result, Tree Nodes: ").append(constraintTree.size())
-                .append(", Constraints: ").append(parentTrackedConstraints().size())
+                .append(", Tracked Constraint Nodes: ").append(parentTrackedConstraints().stream().mapToInt(TrackedConstraint::size).sum())
                 .append(", Success: ").append(this.constraintTree.status().asBoolean()).append(" =============\n")
                 .append("########## CONSTRAINT TREE ##########\n")
                 .append(constraintTree.toString(useSimpleName))

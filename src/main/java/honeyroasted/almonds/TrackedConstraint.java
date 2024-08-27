@@ -51,7 +51,9 @@ public class TrackedConstraint implements Copyable<TrackedConstraint, Void> {
         return tr;
     }
 
-
+    public int size() {
+        return 1 + this.children.stream().mapToInt(TrackedConstraint::size).sum();
+    }
 
     public ConstraintLeaf createLeaf() {
         return new ConstraintLeaf(this);
