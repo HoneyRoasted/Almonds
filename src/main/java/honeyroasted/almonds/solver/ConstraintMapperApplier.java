@@ -76,7 +76,7 @@ public class ConstraintMapperApplier implements ConstraintMapper {
 
             for (ConstraintMapper mapper : this.mappers) {
                 boolean restart = false;
-                if (current instanceof ConstraintTree tree) {
+                if (current instanceof ConstraintTree tree) { //Should always be true due to disjunctive form
                     Set<ConstraintNode> children = new LinkedHashSet<>(tree.children());
                     for (ConstraintNode child : children) {
                         PropertySet branchContext = new PropertySet().inheritFrom(context);
@@ -100,19 +100,6 @@ public class ConstraintMapperApplier implements ConstraintMapper {
                             restart = true;
                             break;
                         }
-                    }
-                } else if (current instanceof ConstraintLeaf leaf) {
-                    PropertySet branchContext = new PropertySet().inheritFrom(context);
-                    consume(leaf, List.of(leaf), branchContext, mapper);
-
-                    if (branchContext.has(DiscardBranch.class) && branchContext.first(DiscardBranch.class).get().value()) {
-                        leaf.setStatus(ConstraintNode.Status.FALSE);
-                        restart = true;
-                    } else if (branchContext.has(ReplaceBranch.class)) {
-                        current = branchContext.first(ReplaceBranch.class).get().replacement().copy();
-                        restart = true;
-                    } else if (branchContext.has(RestartProcessing.class) && branchContext.first(RestartProcessing.class).get().value) {
-                        restart = true;
                     }
                 }
 
