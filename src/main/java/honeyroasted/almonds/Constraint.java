@@ -1,7 +1,5 @@
 package honeyroasted.almonds;
 
-import honeyroasted.almonds.solver.ConstraintMapper;
-
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;

@@ -139,8 +139,6 @@ public final class ConstraintLeaf implements ConstraintNode {
 
     public ConstraintLeaf setStatus(Status status) {
         this.status = status;
-        this.constraint.setStatus(status.asBoolean())
-                .setOperation(null);
         return this;
     }
 

@@ -1,6 +1,5 @@
 package honeyroasted.almonds.solver;
 
-import honeyroasted.almonds.Constraint;
 import honeyroasted.almonds.ConstraintNode;
 import honeyroasted.almonds.ConstraintTree;
 import honeyroasted.almonds.TrackedConstraint;

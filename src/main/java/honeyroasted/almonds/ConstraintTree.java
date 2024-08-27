@@ -40,9 +40,6 @@ public final class ConstraintTree implements ConstraintNode {
         this.constraint = constraint;
         this.operation = operation;
         this.children = children;
-
-        this.constraint.setStatus(false)
-                .setOperation(operation);
     }
 
     public ConstraintTree(ConstraintTree parent, TrackedConstraint constraint, Operation operation) {
