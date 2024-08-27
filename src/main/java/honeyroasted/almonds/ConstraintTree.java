@@ -208,7 +208,6 @@ public final class ConstraintTree implements ConstraintNode {
             ConstraintTree expand = new ConstraintTree(this.constraint, operation);
             if (this.parent != null) {
                 this.parent.detach(this).attach(expand);
-                ;
             }
 
             if (this.operation == Operation.AND) {
@@ -282,7 +281,14 @@ public final class ConstraintTree implements ConstraintNode {
         ConstraintTree or = new ConstraintTree(this.constraint, Operation.OR);
 
         if (this.operation == Operation.OR) {
-            this.children().forEach(cn -> or.attach(cn.disjunctiveForm()));
+            this.children().forEach(cn -> {
+                ConstraintNode disjunct = cn.disjunctiveForm();
+                if (disjunct instanceof ConstraintTree tree && tree.operation == Operation.OR) {
+                    or.attach(tree.children());
+                } else {
+                    or.attach(disjunct);
+                }
+            });
         } else if (this.operation == Operation.AND) {
             Set<ConstraintNode> children = this.children().stream().map(ConstraintNode::disjunctiveForm).collect(Collectors.toCollection(LinkedHashSet::new));
 
