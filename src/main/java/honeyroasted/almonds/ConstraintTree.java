@@ -37,9 +37,10 @@ public final class ConstraintTree implements ConstraintNode {
 
     public ConstraintTree(ConstraintTree parent, TrackedConstraint constraint, Operation operation, Set<ConstraintNode> children) {
         this.parent = parent;
-        this.constraint = constraint;
         this.operation = operation;
         this.children = children;
+
+        this.constraint = constraint.setLinked(this);
     }
 
     public ConstraintTree(ConstraintTree parent, TrackedConstraint constraint, Operation operation) {
