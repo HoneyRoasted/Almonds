@@ -405,7 +405,10 @@ public final class ConstraintTree implements ConstraintNode {
     @Override
     public ConstraintNode collapseConstraints() {
         this.constraint = this.constraint.collapse();
-        this.children.forEach(ConstraintNode::collapseConstraints);
+        this.children.forEach(cn -> {
+            cn.collapseConstraints();
+            this.constraint.addParents(cn.trackedConstraint());
+        });
         return this;
     }
 
