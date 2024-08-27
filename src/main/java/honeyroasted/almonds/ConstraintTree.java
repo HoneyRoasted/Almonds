@@ -12,7 +12,6 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public final class ConstraintTree implements ConstraintNode {
     public static final Equivalence<ConstraintTree> STRUCTURAL = new Equivalence<>() {
@@ -302,10 +301,11 @@ public final class ConstraintTree implements ConstraintNode {
                 }
             }
 
-            cartesianProduct(building, 0, new ArrayList<>(), products ->
-                    or.attach(new ConstraintTree(Constraint.multi(Operation.AND, products.stream().map(ConstraintNode::constraint).toList())
-                            .tracked(Stream.concat(Stream.of(this), products.stream()).map(ConstraintNode::trackedConstraint).toArray(TrackedConstraint[]::new)),
-                            Operation.AND).attach(products.stream().map(ConstraintNode::copy).toList())));
+            cartesianProduct(building, 0, new ArrayList<>(), products -> {
+                TrackedConstraint andCon = Constraint.multi(Operation.AND, products.stream().map(ConstraintNode::constraint).toList()).tracked(this.constraint);
+                andCon.addChildren(products.stream().map(cn -> cn.trackedConstraint().copy().addParents(andCon)).toArray(TrackedConstraint[]::new));
+                or.attach(new ConstraintTree(andCon, Operation.AND).attach(products.stream().map(ConstraintNode::copy).toList()));
+            });
         }
 
         return or;

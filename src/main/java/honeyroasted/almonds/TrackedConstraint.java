@@ -1,5 +1,6 @@
 package honeyroasted.almonds;
 
+import honeyroasted.collect.copy.Copyable;
 import honeyroasted.collect.equivalence.Equivalence;
 
 import java.util.ArrayList;
@@ -10,7 +11,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
-public class TrackedConstraint {
+public class TrackedConstraint implements Copyable<TrackedConstraint, Void> {
     public static final Equivalence<TrackedConstraint> STRUCTURAL = new Equivalence<>() {
         @Override
         protected boolean doEquals(TrackedConstraint left, TrackedConstraint right) {
@@ -49,6 +50,8 @@ public class TrackedConstraint {
         }
         return tr;
     }
+
+
 
     public ConstraintLeaf createLeaf() {
         return new ConstraintLeaf(this);
@@ -155,5 +158,11 @@ public class TrackedConstraint {
             }
             building.add(top);
         }
+    }
+
+    @Override
+    public TrackedConstraint copy(Void context) {
+        return new TrackedConstraint(this.constraint)
+                .addChildren(this.children().stream().map(TrackedConstraint::copy).toArray(TrackedConstraint[]::new));
     }
 }
