@@ -20,6 +20,7 @@ public class MultiConstraintMapper implements ConstraintMapper.Unary<Constraint.
     @Override
     public void process(PropertySet context, ConstraintNode node, Constraint.Multi constraint) {
         node.expand(constraint.operation(),
-                constraint.constraints().stream().map(cn -> cn.tracked(node.trackedConstraint()).createLeaf()).collect(Collectors.toCollection(LinkedHashSet::new)));
+                constraint.constraints().stream().map(Constraint::createLeaf).collect(Collectors.toCollection(LinkedHashSet::new)),
+                false);
     }
 }

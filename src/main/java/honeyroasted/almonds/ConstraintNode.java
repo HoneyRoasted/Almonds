@@ -76,37 +76,29 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void>, I
 
     ConstraintNode setParent(ConstraintTree parent);
 
-    default Constraint constraint() {
-        return trackedConstraint().constraint();
-    }
+    Constraint constraint();
 
     default boolean satisfied(Constraint constraint) {
         return this.stream().anyMatch(cn -> cn.constraint().equals(constraint) && cn.satisfied());
     }
 
-    TrackedConstraint trackedConstraint();
-
     Set<ConstraintLeaf> leaves();
 
-    default ConstraintTree expand(Operation operation, Constraint... newChildren) {
-        return this.expand(operation, Arrays.stream(newChildren).map(c -> c.tracked(this.trackedConstraint()).createLeaf()).toList());
+    default ConstraintTree expand(Operation operation, boolean preserve, Constraint... newChildren) {
+        return this.expand(operation, Arrays.stream(newChildren).map(Constraint::createLeaf).toList(), preserve);
     }
 
-    default ConstraintTree expand(Operation operation, TrackedConstraint... newChildren) {
-        return this.expand(operation, Arrays.stream(newChildren).map(TrackedConstraint::createLeaf).toList());
+    default ConstraintTree expand(Operation operation, boolean preserve, ConstraintNode... newChildren) {
+        return this.expand(operation, List.of(newChildren), preserve);
     }
 
-    default ConstraintTree expand(Operation operation, ConstraintNode... newChildren) {
-        return this.expand(operation, List.of(newChildren));
+    default ConstraintTree expandInPlace(boolean preserve) {
+        return expandInPlace(Operation.OR, preserve);
     }
 
-    ConstraintTree expand(Operation operation, Collection<? extends ConstraintNode> newChildren);
+    ConstraintTree expand(Operation operation, Collection<? extends ConstraintNode> newChildren, boolean preserve);
 
-    default ConstraintTree expandInPlace() {
-        return expandInPlace(Operation.OR);
-    }
-
-    ConstraintTree expandInPlace(Operation defaultOp);
+    ConstraintTree expandInPlace(Operation defaultOp, boolean preserve);
 
     ConstraintLeaf collapse();
 
@@ -149,8 +141,8 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void>, I
         return this.parent() != null ? this.parent().root() : this;
     }
 
-    default ConstraintTree expandRoot(Operation operation) {
-        return root(operation).expandInPlace(operation);
+    default ConstraintTree expandRoot(Operation operation, boolean preserve) {
+        return root(operation).expandInPlace(operation, preserve);
     }
 
     ConstraintNode flattenedForm();
@@ -174,8 +166,6 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void>, I
     String toString(boolean useSimpleName);
 
     String toEquationString();
-
-    ConstraintNode collapseConstraints();
 
     @Override
     default ConstraintNode copy() {
@@ -207,11 +197,6 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void>, I
             public Status or(Status other) {
                 return this;
             }
-
-            @Override
-            public Status not() {
-                return FALSE;
-            }
         },
         FALSE(false) {
             @Override
@@ -222,11 +207,6 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void>, I
             @Override
             public Status or(Status other) {
                 return other;
-            }
-
-            @Override
-            public Status not() {
-                return TRUE;
             }
         },
         UNKNOWN(false) {
@@ -239,10 +219,16 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void>, I
             public Status or(Status other) {
                 return other == TRUE ? other : this;
             }
+        },
+        INFORMATION(true) {
+            @Override
+            public Status and(Status other) {
+                return other;
+            }
 
             @Override
-            public Status not() {
-                return this;
+            public Status or(Status other) {
+                return other;
             }
         };
 
@@ -263,8 +249,6 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void>, I
         public abstract Status and(Status other);
 
         public abstract Status or(Status other);
-
-        public abstract Status not();
     }
 
 }

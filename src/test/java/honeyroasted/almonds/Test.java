@@ -15,19 +15,19 @@ public class Test {
         ConstraintTree and = new ConstraintTree(Constraint.multi(ConstraintNode.Operation.AND,
                 Constraint.multi(ConstraintNode.Operation.OR, a, b),
                 Constraint.multi(ConstraintNode.Operation.OR, c, d),
-                Constraint.multi(ConstraintNode.Operation.OR, e, f)).tracked(), ConstraintNode.Operation.AND);
+                Constraint.multi(ConstraintNode.Operation.OR, e, f)), ConstraintNode.Operation.AND);
 
 
-        ConstraintTree aOrB = new ConstraintTree(Constraint.or().tracked(and.trackedConstraint()), ConstraintNode.Operation.OR);
+        ConstraintTree aOrB = new ConstraintTree(Constraint.or(), ConstraintNode.Operation.OR);
         aOrB.attach(a, b);
         and.attach(aOrB);
 
 
-        ConstraintTree cOrD = new ConstraintTree(Constraint.or().tracked(and.trackedConstraint()), ConstraintNode.Operation.OR);
+        ConstraintTree cOrD = new ConstraintTree(Constraint.or(), ConstraintNode.Operation.OR);
         cOrD.attach(c, d);
         and.attach(cOrD);
 
-        ConstraintTree eOrF = new ConstraintTree(Constraint.or().tracked(and.trackedConstraint()), ConstraintNode.Operation.OR);
+        ConstraintTree eOrF = new ConstraintTree(Constraint.or(), ConstraintNode.Operation.OR);
         eOrF.attach(e, f);
         and.attach(eOrF);
 

@@ -3,7 +3,6 @@ package honeyroasted.almonds.solver;
 import honeyroasted.almonds.Constraint;
 import honeyroasted.almonds.ConstraintNode;
 import honeyroasted.almonds.ConstraintTree;
-import honeyroasted.almonds.TrackedConstraint;
 import honeyroasted.collect.property.PropertySet;
 
 import java.util.ArrayList;
@@ -41,10 +40,8 @@ public class ConstraintSolver {
     }
 
     public SolveResult solve(PropertySet context) {
-        List<TrackedConstraint> trackedConstraints = this.constraints.stream().map(Constraint::tracked).toList();
-
-        ConstraintTree root = new ConstraintTree(Constraint.solve().tracked(), ConstraintNode.Operation.AND);
-        trackedConstraints.forEach(tr -> root.attach(tr.createLeaf()));
+        ConstraintTree root = new ConstraintTree(Constraint.solve(), ConstraintNode.Operation.AND);
+        this.constraints.forEach(tr -> root.attach(tr.createLeaf()));
 
         ConstraintNode current = root;
         for (ConstraintMapperApplier applier : this.appliers) {

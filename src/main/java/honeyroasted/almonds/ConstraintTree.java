@@ -30,39 +30,37 @@ public final class ConstraintTree implements ConstraintNode {
     };
 
     private ConstraintTree parent;
-    private TrackedConstraint constraint;
+    private Constraint constraint;
     private ConstraintNode.Operation operation;
 
     private Set<ConstraintNode> children;
 
-    public ConstraintTree(ConstraintTree parent, TrackedConstraint constraint, Operation operation, Set<ConstraintNode> children) {
+    public ConstraintTree(ConstraintTree parent, Constraint constraint, Operation operation, Set<ConstraintNode> children) {
         this.parent = parent;
         this.constraint = constraint;
         this.operation = operation;
         this.children = children;
     }
 
-    public ConstraintTree(ConstraintTree parent, TrackedConstraint constraint, Operation operation) {
+    public ConstraintTree(ConstraintTree parent, Constraint constraint, Operation operation) {
         this(parent, constraint, operation, new LinkedHashSet<>());
     }
 
-    public ConstraintTree(TrackedConstraint constraint, Operation operation, Set<ConstraintNode> children) {
+    public ConstraintTree(Constraint constraint, Operation operation, Set<ConstraintNode> children) {
         this(null, constraint, operation, children);
     }
 
-    public ConstraintTree(TrackedConstraint constraint, Operation operation) {
+    public ConstraintTree(Constraint constraint, Operation operation) {
         this(null, constraint, operation, new LinkedHashSet<>());
+    }
+
+    public ConstraintTree preserve() {
+        return this.attach(Constraint.preserved(this.constraint)
+                .createLeaf().setStatus(Status.INFORMATION));
     }
 
     public ConstraintTree attach(Constraint... constraints) {
         for (Constraint con : constraints) {
-            this.attach(con.tracked(this.constraint).createLeaf());
-        }
-        return this;
-    }
-
-    public ConstraintTree attach(TrackedConstraint... constraints) {
-        for (TrackedConstraint con : constraints) {
             this.attach(con.createLeaf());
         }
         return this;
@@ -104,17 +102,17 @@ public final class ConstraintTree implements ConstraintNode {
         return this;
     }
 
-    public ConstraintLeaf createLeaf(TrackedConstraint constraint, Status status) {
+    public ConstraintLeaf createLeaf(Constraint constraint, Status status) {
         ConstraintLeaf leaf = new ConstraintLeaf(constraint, status);
         this.attach(leaf);
         return leaf;
     }
 
-    public ConstraintLeaf createLeaf(TrackedConstraint constraint) {
+    public ConstraintLeaf createLeaf(Constraint constraint) {
         return this.createLeaf(constraint, Status.UNKNOWN);
     }
 
-    public ConstraintTree createTree(TrackedConstraint constraint, Operation operation) {
+    public ConstraintTree createTree(Constraint constraint, Operation operation) {
         ConstraintTree tree = new ConstraintTree(constraint, operation);
         this.attach(tree);
         return tree;
@@ -188,7 +186,7 @@ public final class ConstraintTree implements ConstraintNode {
     }
 
     @Override
-    public TrackedConstraint trackedConstraint() {
+    public Constraint constraint() {
         return this.constraint;
     }
 
@@ -200,7 +198,7 @@ public final class ConstraintTree implements ConstraintNode {
     }
 
     @Override
-    public ConstraintTree expand(Operation operation, Collection<? extends ConstraintNode> newChildren) {
+    public ConstraintTree expand(Operation operation, Collection<? extends ConstraintNode> newChildren, boolean preserve) {
         if (operation == this.operation) {
             this.attach(newChildren);
             return this;
@@ -215,8 +213,11 @@ public final class ConstraintTree implements ConstraintNode {
                     Set<ConstraintNode> subChildren = this.children().stream().map(ConstraintNode::copy).collect(Collectors.toCollection(LinkedHashSet::new));
                     subChildren.add(cn.copy());
 
-                    ConstraintTree subTree = Constraint.multi(Operation.AND).tracked(this.constraint).createTree(Operation.AND);
+                    ConstraintTree subTree = Constraint.multi(Operation.AND).createTree(Operation.AND);
                     subTree.attach(subChildren);
+                    if (preserve) {
+                        subTree.attach(Constraint.preserved(this.constraint).createLeaf().setStatus(Status.INFORMATION));
+                    }
 
                     expand.attach(subTree);
                 });
@@ -225,8 +226,11 @@ public final class ConstraintTree implements ConstraintNode {
                     Set<ConstraintNode> subChildren = newChildren.stream().map(ConstraintNode::copy).collect(Collectors.toCollection(LinkedHashSet::new));
                     subChildren.add(cn.copy());
 
-                    ConstraintTree subTree = Constraint.multi(Operation.OR).tracked(this.constraint).createTree(Operation.OR);
+                    ConstraintTree subTree = Constraint.multi(Operation.OR).createTree(Operation.OR);
                     subTree.attach(subChildren);
+                    if (preserve) {
+                        subTree.attach(Constraint.preserved(this.constraint).createLeaf().setStatus(Status.INFORMATION));
+                    }
 
                     expand.attach(subTree);
                 });
@@ -236,7 +240,10 @@ public final class ConstraintTree implements ConstraintNode {
     }
 
     @Override
-    public ConstraintTree expandInPlace(Operation defaultOp) {
+    public ConstraintTree expandInPlace(Operation defaultOp, boolean preserve) {
+        if (preserve) {
+            this.preserve();
+        }
         return this;
     }
 
@@ -301,14 +308,7 @@ public final class ConstraintTree implements ConstraintNode {
                 }
             }
 
-            cartesianProduct(building, 0, new ArrayList<>(), products -> {
-                TrackedConstraint andCon = Constraint.multi(Operation.AND, products.stream().map(ConstraintNode::constraint).toList()).tracked(this.constraint);
-                products.forEach(cn -> {
-                    andCon.addChildren(cn.trackedConstraint());
-                    cn.trackedConstraint().addParents(andCon);
-                });
-                or.attach(new ConstraintTree(andCon, Operation.AND).attach(products.stream().map(ConstraintNode::copy).toList()));
-            });
+            cartesianProduct(building, 0, new ArrayList<>(), products -> or.attach(new ConstraintTree(Constraint.multi(Operation.AND, products.stream().map(ConstraintNode::constraint).toList()), Operation.AND).attach(products.stream().map(ConstraintNode::copy).toList())));
         }
 
         return or;
@@ -351,7 +351,7 @@ public final class ConstraintTree implements ConstraintNode {
         if (this == o) return true;
         if (!(o instanceof ConstraintNode)) return false;
         ConstraintNode node = (ConstraintNode) o;
-        return Objects.equals(constraint, node.trackedConstraint());
+        return Objects.equals(constraint, node.constraint());
     }
 
     @Override
@@ -400,16 +400,6 @@ public final class ConstraintTree implements ConstraintNode {
 
     public String toEquationString() {
         return "(" + this.children.stream().map(ConstraintNode::toEquationString).collect(Collectors.joining(" " + this.operation.operator() + " ")) + ")";
-    }
-
-    @Override
-    public ConstraintNode collapseConstraints() {
-        this.constraint = this.constraint.collapse();
-        this.children.forEach(cn -> {
-            cn.collapseConstraints();
-            this.constraint.addParents(cn.trackedConstraint());
-        });
-        return this;
     }
 
     @Override

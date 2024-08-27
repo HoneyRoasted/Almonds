@@ -28,35 +28,38 @@ public final class ConstraintLeaf implements ConstraintNode {
     private ConstraintTree parent;
     private Status status;
 
-    private TrackedConstraint constraint;
+    private Constraint constraint;
 
-    public ConstraintLeaf(ConstraintTree parent, TrackedConstraint constraint, Status status) {
+    public ConstraintLeaf(ConstraintTree parent, Constraint constraint, Status status) {
         this.parent = parent;
         this.constraint = constraint;
         this.status = status;
     }
 
-    public ConstraintLeaf(TrackedConstraint constraint, Status status) {
+    public ConstraintLeaf(Constraint constraint, Status status) {
         this(null, constraint, status);
     }
 
-    public ConstraintLeaf(TrackedConstraint constraint) {
+    public ConstraintLeaf(Constraint constraint) {
         this(constraint, Status.UNKNOWN);
     }
 
     @Override
-    public ConstraintTree expand(Operation operation, Collection<? extends ConstraintNode> newChildren) {
+    public ConstraintTree expand(Operation operation, Collection<? extends ConstraintNode> newChildren, boolean preserve) {
         ConstraintTree tree = new ConstraintTree(this.constraint, operation);
         if (this.parent != null) {
             this.parent.detach(this).attach(tree);
         }
         tree.attach(newChildren);
+        if (preserve) {
+            tree.attach(Constraint.preserved(this.constraint).createLeaf().setStatus(Status.INFORMATION));
+        }
         return tree;
     }
 
     @Override
-    public ConstraintTree expandInPlace(Operation defaultOp) {
-        return this.expand(defaultOp, Collections.emptySet());
+    public ConstraintTree expandInPlace(Operation defaultOp, boolean preserve) {
+        return this.expand(defaultOp, Collections.emptySet(), preserve);
     }
 
     @Override
@@ -128,7 +131,7 @@ public final class ConstraintLeaf implements ConstraintNode {
     }
 
     @Override
-    public TrackedConstraint trackedConstraint() {
+    public Constraint constraint() {
         return this.constraint;
     }
 
@@ -147,7 +150,7 @@ public final class ConstraintLeaf implements ConstraintNode {
         if (this == o) return true;
         if (!(o instanceof ConstraintNode)) return false;
         ConstraintNode node = (ConstraintNode) o;
-        return Objects.equals(constraint, node.trackedConstraint());
+        return Objects.equals(constraint, node.constraint());
     }
 
     @Override
@@ -169,12 +172,6 @@ public final class ConstraintLeaf implements ConstraintNode {
     @Override
     public String toEquationString() {
         return this.constraint().simpleName();
-    }
-
-    @Override
-    public ConstraintNode collapseConstraints() {
-        this.constraint = this.constraint.collapse();
-        return this;
     }
 
     public void toString(List<String> building, boolean useSimpleName) {

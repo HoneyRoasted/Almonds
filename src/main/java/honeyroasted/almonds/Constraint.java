@@ -18,6 +18,14 @@ public interface Constraint {
 
     List<?> parameters();
 
+    default ConstraintLeaf createLeaf() {
+        return new ConstraintLeaf(this);
+    }
+
+    default ConstraintTree createTree(ConstraintNode.Operation op) {
+        return new ConstraintTree(this, op);
+    }
+
     default  <T extends Constraint> T createNew(List<?> parameters) {
         try {
             return (T) getClass().getConstructors()[0].newInstance(parameters.toArray());
@@ -25,13 +33,6 @@ public interface Constraint {
                  InvocationTargetException e) {
             throw new IllegalStateException("Could not create new instance via reflection", e);
         }
-    }
-    default TrackedConstraint tracked() {
-        return TrackedConstraint.of(this);
-    }
-
-    default TrackedConstraint tracked(TrackedConstraint... parents) {
-        return TrackedConstraint.of(this, parents);
     }
 
     static Constraint preserved(Constraint constraint) {
