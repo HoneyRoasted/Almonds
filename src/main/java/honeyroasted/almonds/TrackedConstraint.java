@@ -1,7 +1,6 @@
 package honeyroasted.almonds;
 
 import honeyroasted.collect.equivalence.Equivalence;
-import honeyroasted.collect.property.PropertySet;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,9 +27,6 @@ public class TrackedConstraint {
     private Set<TrackedConstraint> parents;
     private Set<TrackedConstraint> children;
 
-    private ConstraintNode linked;
-    private PropertySet metadata = new PropertySet();
-
     public TrackedConstraint(Constraint constraint, Set<TrackedConstraint> parents, Set<TrackedConstraint> children) {
         this.constraint = constraint;
         this.parents = parents;
@@ -52,19 +48,6 @@ public class TrackedConstraint {
             originator.addChildren(tr);
         }
         return tr;
-    }
-
-    public TrackedConstraint setLinked(ConstraintNode linked) {
-        this.linked = linked;
-        return this;
-    }
-
-    public ConstraintNode linked() {
-        return this.linked;
-    }
-
-    public PropertySet metadata() {
-        return this.metadata;
     }
 
     public ConstraintLeaf createLeaf() {

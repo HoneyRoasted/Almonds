@@ -32,8 +32,8 @@ public final class ConstraintLeaf implements ConstraintNode {
 
     public ConstraintLeaf(ConstraintTree parent, TrackedConstraint constraint, Status status) {
         this.parent = parent;
+        this.constraint = constraint;
         this.status = status;
-        this.constraint = constraint.setLinked(this);
     }
 
     public ConstraintLeaf(TrackedConstraint constraint, Status status) {
