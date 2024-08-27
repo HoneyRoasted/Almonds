@@ -303,6 +303,10 @@ public final class ConstraintTree implements ConstraintNode {
 
             cartesianProduct(building, 0, new ArrayList<>(), products -> {
                 TrackedConstraint andCon = Constraint.multi(Operation.AND, products.stream().map(ConstraintNode::constraint).toList()).tracked(this.constraint);
+                products.forEach(cn -> {
+                    andCon.addChildren(cn.trackedConstraint());
+                    cn.trackedConstraint().addParents(andCon);
+                });
                 or.attach(new ConstraintTree(andCon, Operation.AND).attach(products.stream().map(ConstraintNode::copy).toList()));
             });
         }

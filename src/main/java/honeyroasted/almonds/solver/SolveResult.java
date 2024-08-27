@@ -104,7 +104,7 @@ public class SolveResult {
                 .append("Success: ").append(this.constraintTree.status().asBoolean()).append("\n")
                 .append("Branches: ").append(this.branches().size()).append(" total, ").append(this.validBranches().size()).append(" valid\n")
                 .append("#################### Valid Branches ####################\n")
-                .append(this.validBranches().stream().map(br -> br.toString(useSimpleName)).collect(Collectors.joining("\n")))
+                .append(this.validBranches().stream().map(br -> br.toString(useSimpleName)).collect(Collectors.joining("\n\n")))
                 .append("#################### Other Branches ####################\n")
                 .append(this.invalidBranches().stream().map(br -> br.toString(useSimpleName)).collect(Collectors.joining("\n")));
         return sb.toString();
