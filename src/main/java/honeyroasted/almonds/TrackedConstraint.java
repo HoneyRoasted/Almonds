@@ -28,6 +28,9 @@ public class TrackedConstraint {
     private Set<TrackedConstraint> parents;
     private Set<TrackedConstraint> children;
 
+    private boolean status;
+    private ConstraintNode.Operation operation;
+
     private PropertySet metadata = new PropertySet();
 
     public TrackedConstraint(Constraint constraint, Set<TrackedConstraint> parents, Set<TrackedConstraint> children) {
@@ -51,6 +54,26 @@ public class TrackedConstraint {
             originator.addChildren(tr);
         }
         return tr;
+    }
+
+    public boolean satisfied() {
+        if (this.operation == null) {
+            return this.status;
+        } else if (this.operation == ConstraintNode.Operation.AND) {
+            return this.children.stream().allMatch(TrackedConstraint::satisfied);
+        } else {
+            return this.children.stream().anyMatch(TrackedConstraint::satisfied);
+        }
+    }
+
+    public TrackedConstraint setStatus(boolean status) {
+        this.status = status;
+        return this;
+    }
+
+    public TrackedConstraint setOperation(ConstraintNode.Operation operation) {
+        this.operation = operation;
+        return this;
     }
 
     public PropertySet metadata() {
