@@ -52,7 +52,7 @@ public class TrackedConstraint implements Copyable<TrackedConstraint, Void> {
     }
 
     public TrackedConstraint collapse() {
-        if (this.children.stream().allMatch(tr -> tr.constraint.equals(this.constraint))) {
+        if (!this.children.isEmpty() && this.children.stream().allMatch(tr -> tr.constraint.equals(this.constraint))) {
             return this.children.iterator().next().collapse();
         } else {
             TrackedConstraint copy = new TrackedConstraint(this.constraint);
