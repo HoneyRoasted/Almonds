@@ -175,6 +175,8 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void>, I
 
     String toEquationString();
 
+    ConstraintNode collapseConstraints();
+
     @Override
     default ConstraintNode copy() {
         return copy(null);

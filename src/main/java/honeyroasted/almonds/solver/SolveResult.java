@@ -4,70 +4,91 @@ import honeyroasted.almonds.ConstraintNode;
 import honeyroasted.almonds.ConstraintTree;
 import honeyroasted.almonds.TrackedConstraint;
 
-import java.util.Collections;
-import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 public class SolveResult {
     private ConstraintNode constraintTree;
-    private List<TrackedConstraint> constraints;
+    private Set<Branch> branches;
+    private Set<Branch> validBranches;
+    private Set<Branch> invalidBranches;
 
-    private Set<TrackedConstraint> parents;
-    private Set<TrackedConstraint> all;
-
-    public SolveResult(ConstraintNode constraintTree, List<TrackedConstraint> constraints) {
+    public SolveResult(ConstraintNode constraintTree) {
         this.constraintTree = constraintTree.disjunctiveForm().flattenedForm();
-        this.constraints = constraints;
     }
 
     public boolean success() {
         return this.constraintTree.satisfied();
     }
 
-    public Set<ConstraintNode> validBranches() {
-        if (this.constraintTree instanceof ConstraintTree tree) {
-            return tree.children().stream().filter(ConstraintNode::satisfied).collect(Collectors.toCollection(LinkedHashSet::new));
+    public Set<Branch> branches() {
+        if (this.branches == null) {
+            this.branches = new LinkedHashSet<>();
+            if (this.constraintTree instanceof ConstraintTree tree) {
+                tree.children().forEach(cn -> this.branches.add(new Branch(cn)));
+            } else {
+                this.branches.add(new Branch(this.constraintTree));
+            }
         }
+        return this.branches;
+    }
 
-        return Set.of(this.constraintTree);
+    public Set<Branch> validBranches() {
+        if (this.validBranches == null) {
+            this.validBranches = this.branches().stream().filter(b -> b.branchRoot().satisfied()).collect(Collectors.toCollection(LinkedHashSet::new));
+        }
+        return this.validBranches;
+    }
+
+    public Set<Branch> invalidBranches() {
+        if (this.invalidBranches == null) {
+            this.invalidBranches = this.branches().stream().filter(b -> !b.branchRoot().satisfied()).collect(Collectors.toCollection(LinkedHashSet::new));
+        }
+        return this.invalidBranches;
     }
 
     public ConstraintNode tree() {
         return this.constraintTree;
     }
 
-    public Set<TrackedConstraint> parentTrackedConstraints() {
-        if (this.parents == null) {
-            Set<TrackedConstraint> parents = Collections.newSetFromMap(new IdentityHashMap<>());
-            this.constraints.forEach(tr -> parentsImpl(tr, parents));
-            this.parents = Collections.unmodifiableSet(parents);
-        }
-        return this.parents;
-    }
+    public static class Branch {
+        private ConstraintNode branch;
 
-    private void parentsImpl(TrackedConstraint constraint, Set<TrackedConstraint> building) {
-        if (constraint.parents().isEmpty()) {
+        private Set<TrackedConstraint> allBranch;
+
+        public Branch(ConstraintNode branch) {
+            this.branch = branch;
+        }
+
+        public ConstraintNode branchRoot() {
+            return this.branch;
+        }
+
+        public Set<TrackedConstraint> all() {
+            if (this.allBranch == null) {
+                this.allBranch = new LinkedHashSet<>();
+                this.branch.visit(cn -> true, cn -> allImpl(cn.trackedConstraint(), this.allBranch));
+            }
+            return this.allBranch;
+        }
+
+        private void allImpl(TrackedConstraint constraint, Set<TrackedConstraint> building) {
             building.add(constraint);
-        } else {
-            constraint.parents().forEach(tr -> parentsImpl(tr, building));
+            constraint.children().forEach(tr -> allImpl(tr, building));
         }
-    }
 
-    public Set<TrackedConstraint> allTrackedConstraints() {
-        if (this.all == null) {
-            Set<TrackedConstraint> all = Collections.newSetFromMap(new IdentityHashMap<>());
-            this.parentTrackedConstraints().forEach(tr -> allImpl(tr, all));
-            this.all = Collections.unmodifiableSet(all);
+        @Override
+        public String toString() {
+            return this.toString(false);
         }
-        return this.all;
-    }
 
-    private void allImpl(TrackedConstraint constraint, Set<TrackedConstraint> building) {
-        building.add(constraint);
-        constraint.children().forEach(tr -> allImpl(tr, building));
+        public String toString(boolean useSimpleName) {
+            return "--------- Branch ---------\n" +
+                    this.branch.toString(useSimpleName) + "\n" +
+                    "\n--------- Tracked Constraint Tree ---------\n" +
+                    this.branch.trackedConstraint().toString(useSimpleName);
+        }
     }
 
     @Override
@@ -77,17 +98,15 @@ public class SolveResult {
 
     public String toString(boolean useSimpleName) {
         StringBuilder sb = new StringBuilder();
-        sb.append("============= Solve Result, Tree Nodes: ").append(constraintTree.size())
-                .append(", Tracked Constraint Nodes: ").append(parentTrackedConstraints().stream().mapToInt(TrackedConstraint::size).sum())
-                .append(", Success: ").append(this.constraintTree.status().asBoolean()).append(" =============\n")
-                .append("########## CONSTRAINT TREE ##########\n")
-                .append(constraintTree.toString(useSimpleName))
-                .append("\n");
-
-        sb.append("########## TRACKED CONSTRAINTS ##########\n");
-        this.parentTrackedConstraints().forEach(tr -> sb.append(tr.toString(useSimpleName)).append("\n"));
-
-
+        sb.append("=============== Solve Result ===============").append("\n")
+                .append("Tree Nodes: ").append(constraintTree.size()).append("\n")
+                .append("Tracked Constraint Nodes: ").append(this.validBranches().stream().mapToInt(br -> br.all().stream().mapToInt(TrackedConstraint::size).sum()).sum()).append("\n")
+                .append("Success: ").append(this.constraintTree.status().asBoolean()).append("\n")
+                .append("Branches: ").append(this.branches().size()).append(" total, ").append(this.validBranches().size()).append(" valid\n")
+                .append("#################### Valid Branches ####################\n")
+                .append(this.validBranches().stream().map(br -> br.toString(useSimpleName)).collect(Collectors.joining("\n")))
+                .append("#################### Other Branches ####################\n")
+                .append(this.invalidBranches().stream().map(br -> br.toString(useSimpleName)).collect(Collectors.joining("\n")));
         return sb.toString();
     }
 

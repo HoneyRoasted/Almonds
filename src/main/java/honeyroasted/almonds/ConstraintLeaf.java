@@ -171,6 +171,12 @@ public final class ConstraintLeaf implements ConstraintNode {
         return this.constraint().simpleName();
     }
 
+    @Override
+    public ConstraintNode collapseConstraints() {
+        this.constraint = this.constraint.collapse();
+        return this;
+    }
+
     public void toString(List<String> building, boolean useSimpleName) {
         building.add("Condition: " + (useSimpleName ? this.constraint().simpleName() : this.constraint().toString()));
         building.add("Satisfied: " + this.status);

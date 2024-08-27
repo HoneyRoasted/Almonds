@@ -399,6 +399,13 @@ public final class ConstraintTree implements ConstraintNode {
     }
 
     @Override
+    public ConstraintNode collapseConstraints() {
+        this.constraint = this.constraint.collapse();
+        this.children.forEach(ConstraintNode::collapseConstraints);
+        return this;
+    }
+
+    @Override
     public ConstraintTree copy() {
         ConstraintTree copy = new ConstraintTree(this.constraint, this.operation);
         this.children.forEach(cn -> copy.attach(cn.copy()));

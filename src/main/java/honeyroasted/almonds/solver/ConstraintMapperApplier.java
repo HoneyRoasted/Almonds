@@ -69,7 +69,7 @@ public class ConstraintMapperApplier implements ConstraintMapper {
 
     public ConstraintNode process(ConstraintNode node, PropertySet context) {
         ConstraintNode previous;
-        ConstraintNode current = node.disjunctiveForm().flattenedForm();
+        ConstraintNode current = node.disjunctiveForm().flattenedForm().collapseConstraints();
 
         do {
             previous = current.copy();
@@ -103,7 +103,7 @@ public class ConstraintMapperApplier implements ConstraintMapper {
                     }
                 }
 
-                current = current.disjunctiveForm().flattenedForm();
+                current = current.disjunctiveForm().flattenedForm().collapseConstraints();
                 if (restart) break;
             }
         } while (!ConstraintNode.structural().equals(previous, current));
