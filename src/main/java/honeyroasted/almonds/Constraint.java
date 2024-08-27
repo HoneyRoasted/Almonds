@@ -1,5 +1,7 @@
 package honeyroasted.almonds;
 
+import honeyroasted.almonds.solver.ConstraintMapper;
+
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -32,6 +34,10 @@ public interface Constraint {
 
     default TrackedConstraint tracked(TrackedConstraint... parents) {
         return TrackedConstraint.of(this, parents);
+    }
+
+    static Constraint preserved(Constraint constraint) {
+        return new Information(constraint);
     }
 
     static Constraint label(String name) {
@@ -244,6 +250,33 @@ public interface Constraint {
             return "LABEL('" + this.value() + "')";
         }
 
+    }
+
+    class Information extends Unary<Constraint> {
+
+        public Information(Constraint value) {
+            super(value);
+        }
+
+        @Override
+        public String simpleName() {
+            return "info(" + this.value().simpleName() + ")";
+        }
+
+        @Override
+        public String toString() {
+            return "INFORMATIONAL: " + this.value();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            return this == o;
+        }
+
+        @Override
+        public int hashCode() {
+            return System.identityHashCode(this);
+        }
     }
 
     class Multi implements Constraint {

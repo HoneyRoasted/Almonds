@@ -1,3 +1,2 @@
 # Almonds
-A naive constraint solving framework
-.
+A naive constraint solving framework .

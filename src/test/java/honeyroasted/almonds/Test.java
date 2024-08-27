@@ -18,21 +18,20 @@ public class Test {
                 Constraint.multi(ConstraintNode.Operation.OR, e, f)).tracked(), ConstraintNode.Operation.AND);
 
 
-        ConstraintTree aOrB = new ConstraintTree(Constraint.or().tracked(), ConstraintNode.Operation.OR);
-        aOrB.attach(a.tracked().createLeaf(), b.tracked().createLeaf());
+        ConstraintTree aOrB = new ConstraintTree(Constraint.or().tracked(and.trackedConstraint()), ConstraintNode.Operation.OR);
+        aOrB.attach(a, b);
         and.attach(aOrB);
 
 
-        ConstraintTree cOrD = new ConstraintTree(Constraint.or().tracked(), ConstraintNode.Operation.OR);
-        cOrD.attach(c.tracked().createLeaf(), d.tracked().createLeaf());
+        ConstraintTree cOrD = new ConstraintTree(Constraint.or().tracked(and.trackedConstraint()), ConstraintNode.Operation.OR);
+        cOrD.attach(c, d);
         and.attach(cOrD);
 
-        ConstraintTree eOrF = new ConstraintTree(Constraint.or().tracked(), ConstraintNode.Operation.OR);
-        eOrF.attach(e.tracked().createLeaf(), f.tracked().createLeaf());
+        ConstraintTree eOrF = new ConstraintTree(Constraint.or().tracked(and.trackedConstraint()), ConstraintNode.Operation.OR);
+        eOrF.attach(e, f);
         and.attach(eOrF);
 
-
-        and.stream().forEach(cn -> System.out.println(cn.constraint()));
+        System.out.println(and.disjunctiveForm().flattenedForm().toString(true));
     }
 
 }
