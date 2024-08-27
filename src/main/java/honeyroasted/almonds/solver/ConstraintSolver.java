@@ -51,7 +51,7 @@ public class ConstraintSolver {
             current = applier.process(current, new PropertySet().inheritFrom(context).inheritFrom(this.context));
         }
 
-        return new SolveResult(current.copy(), trackedConstraints);
+        return new SolveResult(current.copy());
     }
 
 }
