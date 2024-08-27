@@ -34,8 +34,6 @@ public final class ConstraintLeaf implements ConstraintNode {
         this.parent = parent;
         this.constraint = constraint;
         this.status = status;
-        this.constraint.setStatus(this.status.asBoolean())
-                .setOperation(null);
     }
 
     public ConstraintLeaf(TrackedConstraint constraint, Status status) {

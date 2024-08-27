@@ -36,8 +36,8 @@ public class SolveResult {
         return Set.of(this.constraintTree);
     }
 
-    public boolean satisfied(Constraint constraint) {
-        return this.constraintTree.stream().anyMatch(cn -> cn.constraint().equals(constraint) && cn.satisfied());
+    public ConstraintNode tree() {
+        return this.constraintTree;
     }
 
     public Set<TrackedConstraint> parentTrackedConstraints() {

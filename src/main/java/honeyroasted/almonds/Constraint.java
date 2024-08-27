@@ -267,16 +267,6 @@ public interface Constraint {
         public String toString() {
             return "INFORMATIONAL: " + this.value();
         }
-
-        @Override
-        public boolean equals(Object o) {
-            return this == o;
-        }
-
-        @Override
-        public int hashCode() {
-            return System.identityHashCode(this);
-        }
     }
 
     class Multi implements Constraint {
