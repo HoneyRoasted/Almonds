@@ -35,7 +35,8 @@ public interface ConstraintMapper {
 
         @Override
         default boolean filter(PropertySet context, ConstraintNode node) {
-            return type().isInstance(node.constraint()) &&
+            return node.status() != ConstraintNode.Status.INFORMATION &&
+                    type().isInstance(node.constraint()) &&
                     filter(context, node, (T) node.constraint());
         }
 
@@ -70,7 +71,8 @@ public interface ConstraintMapper {
 
         @Override
         default boolean filter(PropertySet context, ConstraintNode node) {
-            return (leftType().isInstance(node.constraint()) && filterLeft(context, node, (L) node.constraint())) ||
+            return node.status() != ConstraintNode.Status.INFORMATION &&
+                    (leftType().isInstance(node.constraint()) && filterLeft(context, node, (L) node.constraint())) ||
                     (rightType().isInstance(node.constraint()) && filterRight(context, node, (R) node.constraint()));
         }
 
