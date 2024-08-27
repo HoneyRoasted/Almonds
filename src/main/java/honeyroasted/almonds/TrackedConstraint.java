@@ -163,6 +163,7 @@ public class TrackedConstraint {
 
     public void toString(List<String> building, boolean useSimpleName) {
         building.add("Condition: " + (useSimpleName ? this.constraint().simpleName() : this.constraint().toString()));
+        building.add("Satisfied: " + this.satisfied());
 
         if (!this.children.isEmpty()) {
             building.add("Children: " + this.children.size());
