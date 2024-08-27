@@ -78,7 +78,11 @@ public final class ConstraintLeaf implements ConstraintNode {
 
     @Override
     public ConstraintNode disjunctiveForm() {
-        return this.copy();
+        ConstraintTree or = new ConstraintTree(this.constraint, Operation.OR);
+        ConstraintTree and = new ConstraintTree(this.constraint, Operation.AND);
+        or.attach(and);
+        and.attach(this.copy());
+        return or;
     }
 
     @Override
