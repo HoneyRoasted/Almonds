@@ -80,8 +80,8 @@ public class ConstraintMapperApplier implements ConstraintMapper {
                     Set<ConstraintNode> children = new LinkedHashSet<>(tree.children());
 
                     for (ConstraintNode child : children) {
-                        PropertySet branchMetadata = child.metadata();
                         PropertySet instanceContext = new PropertySet().inheritFrom(context);
+                        PropertySet branchMetadata = child.metadata();
 
                         if (child instanceof ConstraintLeaf leaf) {
                             consume(leaf, List.of(leaf), instanceContext, branchMetadata, mapper);
@@ -95,6 +95,7 @@ public class ConstraintMapperApplier implements ConstraintMapper {
                             break;
                         } else if (instanceContext.has(ReplaceBranch.class)) {
                             ConstraintNode replacement = instanceContext.first(ReplaceBranch.class).get().replacement().copy();
+                            replacement.metadata().inheritFrom(branchMetadata);
                             tree.detach(child).attach(replacement);
                             restart = true;
                             break;

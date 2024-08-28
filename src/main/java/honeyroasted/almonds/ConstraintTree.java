@@ -308,10 +308,9 @@ public final class ConstraintTree implements ConstraintNode {
     @Override
     public ConstraintNode disjunctiveForm() {
         ConstraintTree or = new ConstraintTree(this.constraint, Operation.OR);
+        or.metadata().copyFrom(this.metadata);
 
         if (this.operation == Operation.OR) {
-            or.metadata().copyFrom(this.metadata);
-
             this.children().forEach(cn -> {
                 ConstraintNode disjunct = cn.disjunctiveForm();
                 if (disjunct instanceof ConstraintTree tree && tree.operation == Operation.OR) {
