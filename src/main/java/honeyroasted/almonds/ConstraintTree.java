@@ -336,7 +336,10 @@ public final class ConstraintTree implements ConstraintNode {
             cartesianProduct(building, 0, new ArrayList<>(), products -> {
                 ConstraintTree parent = new ConstraintTree(Constraint.multi(Operation.AND, products.stream().map(p -> p.left().constraint()).toList()), Operation.AND).attach(products.stream().map(p -> p.left().copy()).toList());
                 parent.metadata().copyFrom(this.metadata);
-                products.forEach(p -> parent.metadata().inheritFrom(p.right()));
+                products.forEach(p -> {
+                    parent.metadata().inheritFrom(p.right());
+                    parent.metadata().inheritFrom(p.left().metadata());
+                });
                 or.attach(parent);
             });
         }
