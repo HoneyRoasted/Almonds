@@ -1,12 +1,15 @@
 package honeyroasted.almonds;
 
 import honeyroasted.collect.equivalence.Equivalence;
+import honeyroasted.collect.property.PropertySet;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -19,13 +22,13 @@ public final class ConstraintTree implements ConstraintNode {
         protected boolean doEquals(ConstraintTree left, ConstraintTree right) {
             return left.operation == right.operation &&
                     Objects.equals(left.constraint, right.constraint) &&
-                    ConstraintNode.structural().setEquals(left.children, right.children);
+                    ConstraintNode.structural().setEquals(left.children.keySet(), right.children.keySet());
         }
 
         @Override
         protected int doHashCode(ConstraintTree val) {
             return Objects.hash(val.operation, val.constraint.hashCode(),
-                    ConstraintNode.structural().setHash(val.children));
+                    ConstraintNode.structural().setHash(val.children.keySet()));
         }
     };
 
@@ -33,9 +36,10 @@ public final class ConstraintTree implements ConstraintNode {
     private Constraint constraint;
     private ConstraintNode.Operation operation;
 
-    private Set<ConstraintNode> children;
+    private Map<ConstraintNode, ConstraintNode> children;
+    private PropertySet metadata = new PropertySet();
 
-    public ConstraintTree(ConstraintTree parent, Constraint constraint, Operation operation, Set<ConstraintNode> children) {
+    public ConstraintTree(ConstraintTree parent, Constraint constraint, Operation operation, Map<ConstraintNode, ConstraintNode> children) {
         this.parent = parent;
         this.constraint = constraint;
         this.operation = operation;
@@ -43,15 +47,15 @@ public final class ConstraintTree implements ConstraintNode {
     }
 
     public ConstraintTree(ConstraintTree parent, Constraint constraint, Operation operation) {
-        this(parent, constraint, operation, new LinkedHashSet<>());
+        this(parent, constraint, operation, new LinkedHashMap<>());
     }
 
-    public ConstraintTree(Constraint constraint, Operation operation, Set<ConstraintNode> children) {
+    public ConstraintTree(Constraint constraint, Operation operation, Map<ConstraintNode, ConstraintNode> children) {
         this(null, constraint, operation, children);
     }
 
     public ConstraintTree(Constraint constraint, Operation operation) {
-        this(null, constraint, operation, new LinkedHashSet<>());
+        this(null, constraint, operation, new LinkedHashMap<>());
     }
 
     public ConstraintTree preserve() {
@@ -68,16 +72,26 @@ public final class ConstraintTree implements ConstraintNode {
 
     public ConstraintTree attach(ConstraintNode... nodes) {
         for (ConstraintNode node : nodes) {
-            node.setParent(this);
-            this.children.add(node);
+            ConstraintNode existing = this.children.get(node);
+            if (existing == null) {
+                node.setParent(this);
+                this.children.put(node, node);
+            } else {
+                existing.metadata().inheritFrom(node.metadata());
+            }
         }
         return this;
     }
 
     public ConstraintTree attach(Collection<? extends ConstraintNode> nodes) {
         for (ConstraintNode node : nodes) {
-            node.setParent(this);
-            this.children.add(node);
+            ConstraintNode existing = this.children.get(node);
+            if (existing == null) {
+                node.setParent(this);
+                this.children.put(node, node);
+            } else {
+                existing.metadata().inheritFrom(node.metadata());
+            }
         }
         return this;
     }
@@ -123,7 +137,7 @@ public final class ConstraintTree implements ConstraintNode {
         if (this.children.isEmpty()) {
             return Status.TRUE;
         } else {
-            Iterator<ConstraintNode> iterator = this.children.iterator();
+            Iterator<ConstraintNode> iterator = this.children.keySet().iterator();
             Status curr = iterator.next().status();
             while (iterator.hasNext()) {
                 Status next = iterator.next().status();
@@ -144,7 +158,7 @@ public final class ConstraintTree implements ConstraintNode {
         if (this.children.isEmpty()) {
             status = Status.UNKNOWN;
         } else {
-            Iterator<ConstraintNode> iterator = this.children.iterator();
+            Iterator<ConstraintNode> iterator = this.children.keySet().iterator();
             Status curr = iterator.next().status();
             while (iterator.hasNext()) {
                 Status next = iterator.next().strictStatus();
@@ -165,13 +179,13 @@ public final class ConstraintTree implements ConstraintNode {
 
     @Override
     public ConstraintTree overrideStatus(Status status) {
-        this.children.forEach(cn -> cn.overrideStatus(status));
+        this.children.forEach((cn, v) -> cn.overrideStatus(status));
         return this;
     }
 
     @Override
     public Set<ConstraintNode> children() {
-        return this.children;
+        return this.children.keySet();
     }
 
     @Override
@@ -253,6 +267,11 @@ public final class ConstraintTree implements ConstraintNode {
     }
 
     @Override
+    public PropertySet metadata() {
+        return this.metadata;
+    }
+
+    @Override
     public void visit(Predicate<ConstraintNode> test, Predicate<ConstraintTree> snipper, Consumer<ConstraintNode> action) {
         if (test.test(this)) {
             action.accept(this);
@@ -267,7 +286,7 @@ public final class ConstraintTree implements ConstraintNode {
     public ConstraintNode flattenedForm() {
         ConstraintTree flat = new ConstraintTree(this.constraint, this.operation);
 
-        this.children.forEach(cn -> {
+        this.children.forEach((cn, v) -> {
             if (cn instanceof ConstraintTree tree) {
                 ConstraintNode flatChild = tree.flattenedForm();
                 if (tree.operation() == this.operation && flatChild instanceof ConstraintTree childTree) {
@@ -288,9 +307,12 @@ public final class ConstraintTree implements ConstraintNode {
         ConstraintTree or = new ConstraintTree(this.constraint, Operation.OR);
 
         if (this.operation == Operation.OR) {
+            or.metadata().copyFrom(this.metadata);
+
             this.children().forEach(cn -> {
                 ConstraintNode disjunct = cn.disjunctiveForm();
                 if (disjunct instanceof ConstraintTree tree && tree.operation == Operation.OR) {
+                    or.metadata().inheritFrom(tree.metadata());
                     or.attach(tree.children());
                 } else {
                     or.attach(disjunct);
@@ -308,7 +330,11 @@ public final class ConstraintTree implements ConstraintNode {
                 }
             }
 
-            cartesianProduct(building, 0, new ArrayList<>(), products -> or.attach(new ConstraintTree(Constraint.multi(Operation.AND, products.stream().map(ConstraintNode::constraint).toList()), Operation.AND).attach(products.stream().map(ConstraintNode::copy).toList())));
+            cartesianProduct(building, 0, new ArrayList<>(), products -> {
+                ConstraintTree parent = new ConstraintTree(Constraint.multi(Operation.AND, products.stream().map(ConstraintNode::constraint).toList()), Operation.AND).attach(products.stream().map(ConstraintNode::copy).toList());
+                parent.metadata().copyFrom(this.metadata);
+                or.attach(parent);
+            });
         }
 
         return or;
@@ -329,7 +355,7 @@ public final class ConstraintTree implements ConstraintNode {
 
     @Override
     public int size() {
-        return 1 + this.children.stream().mapToInt(ConstraintNode::size).sum();
+        return 1 + this.children.keySet().stream().mapToInt(ConstraintNode::size).sum();
     }
 
     @Override
@@ -399,20 +425,22 @@ public final class ConstraintTree implements ConstraintNode {
     }
 
     public String toEquationString() {
-        return "(" + this.children.stream().map(ConstraintNode::toEquationString).collect(Collectors.joining(" " + this.operation.operator() + " ")) + ")";
+        return "(" + this.children.keySet().stream().map(ConstraintNode::toEquationString).collect(Collectors.joining(" " + this.operation.operator() + " ")) + ")";
     }
 
     @Override
     public ConstraintTree copy() {
         ConstraintTree copy = new ConstraintTree(this.constraint, this.operation);
-        this.children.forEach(cn -> copy.attach(cn.copy()));
+        copy.metadata().copyFrom(this.metadata);
+        this.children.forEach((cn, v) -> copy.attach(cn.copy()));
         return copy;
     }
 
     @Override
     public ConstraintTree copy(Void context) {
         ConstraintTree copy = new ConstraintTree(this.constraint, this.operation);
-        this.children.forEach(cn -> copy.attach(cn.copy()));
+        copy.metadata().copyFrom(this.metadata);
+        this.children.forEach((cn, v) -> copy.attach(cn.copy()));
         return copy;
     }
 }

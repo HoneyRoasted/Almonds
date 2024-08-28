@@ -1,6 +1,7 @@
 package honeyroasted.almonds;
 
 import honeyroasted.collect.equivalence.Equivalence;
+import honeyroasted.collect.property.PropertySet;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -30,6 +31,8 @@ public final class ConstraintLeaf implements ConstraintNode {
 
     private Constraint constraint;
 
+    private PropertySet metadata = new PropertySet();
+
     public ConstraintLeaf(ConstraintTree parent, Constraint constraint, Status status) {
         this.parent = parent;
         this.constraint = constraint;
@@ -47,6 +50,7 @@ public final class ConstraintLeaf implements ConstraintNode {
     @Override
     public ConstraintTree expand(Operation operation, Collection<? extends ConstraintNode> newChildren, boolean preserve) {
         ConstraintTree tree = new ConstraintTree(this.constraint, operation);
+        tree.metadata().copyFrom(this.metadata);
         if (this.parent != null) {
             this.parent.detach(this).attach(tree);
         }
@@ -68,6 +72,11 @@ public final class ConstraintLeaf implements ConstraintNode {
     }
 
     @Override
+    public PropertySet metadata() {
+        return this.metadata;
+    }
+
+    @Override
     public void visit(Predicate<ConstraintNode> test, Predicate<ConstraintTree> snipper, Consumer<ConstraintNode> action) {
         if (test.test(this)) {
             action.accept(this);
@@ -82,8 +91,12 @@ public final class ConstraintLeaf implements ConstraintNode {
     @Override
     public ConstraintNode disjunctiveForm() {
         ConstraintTree or = new ConstraintTree(this.constraint, Operation.OR);
+        or.metadata().copyFrom(this.metadata);
+
         ConstraintTree and = new ConstraintTree(this.constraint, Operation.AND);
+        and.metadata().copyFrom(this.metadata);
         or.attach(and);
+
         and.attach(this.copy());
         return or;
     }
@@ -181,6 +194,8 @@ public final class ConstraintLeaf implements ConstraintNode {
 
     @Override
     public ConstraintLeaf copy(Void context) {
-        return new ConstraintLeaf(this.constraint, this.status);
+        ConstraintLeaf leaf = new ConstraintLeaf(this.constraint, this.status);
+        leaf.metadata().copyFrom(this.metadata);
+        return leaf;
     }
 }

@@ -29,25 +29,25 @@ public class ConstraintMapperApplier implements ConstraintMapper {
     }
 
     @Override
-    public boolean filter(PropertySet context, ConstraintNode node) {
+    public boolean filter(PropertySet instanceContext, PropertySet branchContext, ConstraintNode node) {
         return true;
     }
 
     @Override
-    public boolean accepts(PropertySet context, ConstraintNode... nodes) {
+    public boolean accepts(PropertySet instanceContext, PropertySet branchContext, ConstraintNode... nodes) {
         return true;
     }
 
     @Override
-    public void process(PropertySet context, ConstraintNode... nodes) {
+    public void process(PropertySet instanceContext, PropertySet branchContext, ConstraintNode... nodes) {
         ConstraintTree tree = new ConstraintTree(Constraint.solve(), ConstraintNode.Operation.AND);
         Stream.of(nodes).forEach(cn -> tree.attach(cn.copy()));
 
         ConstraintNode original = tree.copy().disjunctiveForm().flattenedForm();
-        ConstraintNode replacement = process(tree, new PropertySet().inheritUnique(context));
+        ConstraintNode replacement = process(tree, new PropertySet().copyFrom(instanceContext));
 
         if (!original.structuralEquals(replacement)) {
-            context.attach(new ReplaceBranch(replacement));
+            instanceContext.attach(new ReplaceBranch(replacement));
         }
     }
 
@@ -78,25 +78,27 @@ public class ConstraintMapperApplier implements ConstraintMapper {
                 boolean restart = false;
                 if (current instanceof ConstraintTree tree) { //Should always be true due to disjunctive form
                     Set<ConstraintNode> children = new LinkedHashSet<>(tree.children());
+                    PropertySet branchMetadata = tree.metadata();
+
                     for (ConstraintNode child : children) {
-                        PropertySet branchContext = new PropertySet().inheritFrom(context);
+                        PropertySet instanceContext = new PropertySet().inheritFrom(context);
 
                         if (child instanceof ConstraintLeaf leaf) {
-                            consume(leaf, List.of(leaf), branchContext, mapper);
+                            consume(leaf, List.of(leaf), instanceContext, branchMetadata, mapper);
                         } else if (child instanceof ConstraintTree childTree) {
-                            consume(childTree, childTree.children(), branchContext, mapper);
+                            consume(childTree, childTree.children(), instanceContext, branchMetadata, mapper);
                         }
 
-                        if (branchContext.has(DiscardBranch.class) && branchContext.first(DiscardBranch.class).get().value()) {
+                        if (instanceContext.has(DiscardBranch.class) && instanceContext.first(DiscardBranch.class).get().value()) {
                             tree.detach(child);
                             restart = true;
                             break;
-                        } else if (branchContext.has(ReplaceBranch.class)) {
-                            ConstraintNode replacement = branchContext.first(ReplaceBranch.class).get().replacement().copy();
+                        } else if (instanceContext.has(ReplaceBranch.class)) {
+                            ConstraintNode replacement = instanceContext.first(ReplaceBranch.class).get().replacement().copy();
                             tree.detach(child).attach(replacement);
                             restart = true;
                             break;
-                        } else if (branchContext.has(RestartProcessing.class) && branchContext.first(RestartProcessing.class).get().value) {
+                        } else if (instanceContext.has(RestartProcessing.class) && instanceContext.first(RestartProcessing.class).get().value) {
                             restart = true;
                             break;
                         }
@@ -117,17 +119,17 @@ public class ConstraintMapperApplier implements ConstraintMapper {
                 (context.has(RestartProcessing.class) && context.first(RestartProcessing.class).get().value);
     }
 
-    private static void consume(ConstraintNode parent, Collection<ConstraintNode> processing, PropertySet context, ConstraintMapper mapper) {
+    private static void consume(ConstraintNode parent, Collection<ConstraintNode> processing, PropertySet instanceContext, PropertySet branchContext, ConstraintMapper mapper) {
         if (mapper.arity() == ConstraintMapper.PARENT_BRANCH_NODE) {
-            if (mapper.filter(context, parent) && mapper.accepts(context, parent)) {
-                mapper.process(context, parent);
+            if (mapper.filter(instanceContext, branchContext, parent) && mapper.accepts(instanceContext, branchContext, parent)) {
+                mapper.process(instanceContext, branchContext, parent);
             }
         } else {
-            consumeSubsets(processing.stream().filter(cn -> mapper.filter(context, cn)).toList(), mapper.arity(), mapper.commutative(), arr -> {
-                if (mapper.accepts(context, arr)) {
-                    mapper.process(context, arr);
+            consumeSubsets(processing.stream().filter(cn -> mapper.filter(instanceContext, branchContext, cn)).toList(), mapper.arity(), mapper.commutative(), arr -> {
+                if (mapper.accepts(instanceContext, branchContext, arr)) {
+                    mapper.process(instanceContext, branchContext, arr);
                 }
-            }, ConstraintNode.class, () -> shouldRestart(context));
+            }, ConstraintNode.class, () -> shouldRestart(instanceContext));
         }
     }
 

@@ -2,6 +2,7 @@ package honeyroasted.almonds;
 
 import honeyroasted.collect.copy.Copyable;
 import honeyroasted.collect.equivalence.Equivalence;
+import honeyroasted.collect.property.PropertySet;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -101,6 +102,8 @@ public sealed interface ConstraintNode extends Copyable<ConstraintNode, Void>, I
     ConstraintTree expandInPlace(Operation defaultOp, boolean preserve);
 
     ConstraintLeaf collapse();
+
+    PropertySet metadata();
 
     default void visit(Predicate<ConstraintNode> test, Consumer<ConstraintNode> action) {
         visit(test, c -> false, action);

@@ -16,7 +16,7 @@ public interface Constraint {
 
     String simpleName();
 
-    List<?> parameters();
+    List<Object> parameters();
 
     default ConstraintLeaf createLeaf() {
         return new ConstraintLeaf(this);
@@ -78,7 +78,7 @@ public interface Constraint {
 
 
         @Override
-        public List<?> parameters() {
+        public List<Object> parameters() {
             return List.of(this.value);
         }
 
@@ -114,7 +114,7 @@ public interface Constraint {
         }
 
         @Override
-        public List<?> parameters() {
+        public List<Object> parameters() {
             return List.of(this.left, this.right);
         }
 
@@ -156,7 +156,7 @@ public interface Constraint {
         }
 
         @Override
-        public List<?> parameters() {
+        public List<Object> parameters() {
             return List.of(this.left, this.middle, this.right);
         }
 
@@ -192,7 +192,7 @@ public interface Constraint {
         }
 
         @Override
-        public List<?> parameters() {
+        public List<Object> parameters() {
             return Collections.emptyList();
         }
     }
@@ -296,7 +296,7 @@ public interface Constraint {
         }
 
         @Override
-        public List<?> parameters() {
+        public List<Object> parameters() {
             List<Object> params = new ArrayList<>();
             params.add(this.operation);
             params.addAll(this.constraints);
