@@ -13,12 +13,12 @@ public class MultiConstraintMapper implements ConstraintMapper.Unary<Constraint.
     public static ConstraintMapper INSTANCE = new MultiConstraintMapper();
 
     @Override
-    public boolean filter(PropertySet context, ConstraintNode node, Constraint.Multi constraint) {
+    public boolean filter(PropertySet instanceContext, PropertySet branchContext, ConstraintNode node, Constraint.Multi constraint) {
         return node.isLeaf() || (node instanceof ConstraintTree tree && tree.children().isEmpty());
     }
 
     @Override
-    public void process(PropertySet context, ConstraintNode node, Constraint.Multi constraint) {
+    public void process(PropertySet instanceContext, PropertySet branchContext, ConstraintNode node, Constraint.Multi constraint) {
         node.expand(constraint.operation(),
                 constraint.constraints().stream().map(Constraint::createLeaf).collect(Collectors.toCollection(LinkedHashSet::new)),
                 false);

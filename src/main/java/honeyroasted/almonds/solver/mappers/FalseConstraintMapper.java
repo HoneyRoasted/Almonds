@@ -9,7 +9,7 @@ public class FalseConstraintMapper implements ConstraintMapper.Unary<Constraint.
     public static ConstraintMapper INSTANCE = new FalseConstraintMapper();
 
     @Override
-    public void process(PropertySet context, ConstraintNode node, Constraint.False constraint) {
+    public void process(PropertySet instanceContext, PropertySet branchContext, ConstraintNode node, Constraint.False constraint) {
         node.overrideStatus(ConstraintNode.Status.FALSE);
     }
 }

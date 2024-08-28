@@ -9,7 +9,7 @@ public class TrueConstraintMapper implements ConstraintMapper.Unary<Constraint.T
     public static ConstraintMapper INSTANCE = new TrueConstraintMapper();
 
     @Override
-    public void process(PropertySet context, ConstraintNode node, Constraint.True constraint) {
+    public void process(PropertySet instanceContext, PropertySet branchContext, ConstraintNode node, Constraint.True constraint) {
         node.overrideStatus(ConstraintNode.Status.TRUE);
     }
 }
