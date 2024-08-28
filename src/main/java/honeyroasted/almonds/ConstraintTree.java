@@ -285,12 +285,14 @@ public final class ConstraintTree implements ConstraintNode {
     @Override
     public ConstraintNode flattenedForm() {
         ConstraintTree flat = new ConstraintTree(this.constraint, this.operation);
+        flat.metadata().copyFrom(this.metadata);
 
         this.children.forEach((cn, v) -> {
             if (cn instanceof ConstraintTree tree) {
                 ConstraintNode flatChild = tree.flattenedForm();
                 if (tree.operation() == this.operation && flatChild instanceof ConstraintTree childTree) {
                     flat.attach(childTree.children());
+                    flat.metadata().inheritFrom(childTree.metadata());
                 } else {
                     flat.attach(flatChild);
                 }

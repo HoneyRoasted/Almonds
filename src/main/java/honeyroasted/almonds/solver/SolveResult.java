@@ -4,6 +4,7 @@ import honeyroasted.almonds.ConstraintNode;
 import honeyroasted.almonds.ConstraintTree;
 
 import java.util.LinkedHashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -70,9 +71,14 @@ public class SolveResult {
     }
 
     private String toString(ConstraintNode branch, boolean useSimpleName) {
-        return "Metadata: \n" + branch.metadata().all(Object.class)
-                .stream().map(String::valueOf).collect(Collectors.joining("\n")) +
-                "\nTree: \n" + branch.toString(useSimpleName);
+        Set<Object> metadata = branch.metadata().all(Object.class);
+        if (metadata.isEmpty()) {
+            return "- Metadata: empty\n- Tree:\n" + branch.toString(useSimpleName);
+        } else {
+            return "- Metadata: \n" +
+                    metadata.stream().map(String::valueOf).collect(Collectors.joining("\n")) +
+                    "\n- Tree: \n" + branch.toString(useSimpleName);
+        }
     }
 
 }
