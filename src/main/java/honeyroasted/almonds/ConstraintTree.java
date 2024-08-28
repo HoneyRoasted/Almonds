@@ -1,6 +1,7 @@
 package honeyroasted.almonds;
 
 import honeyroasted.collect.equivalence.Equivalence;
+import honeyroasted.collect.multi.Pair;
 import honeyroasted.collect.property.PropertySet;
 
 import java.util.ArrayList;
@@ -323,18 +324,19 @@ public final class ConstraintTree implements ConstraintNode {
         } else if (this.operation == Operation.AND) {
             Set<ConstraintNode> children = this.children().stream().map(ConstraintNode::disjunctiveForm).collect(Collectors.toCollection(LinkedHashSet::new));
 
-            List<List<ConstraintNode>> building = new ArrayList<>();
+            List<List<Pair<ConstraintNode, PropertySet>>> building = new ArrayList<>();
             for (ConstraintNode child : children) {
                 if (child instanceof ConstraintTree dnf && dnf.operation == Operation.OR) {
-                    building.add(new ArrayList<>(dnf.children()));
+                    building.add(dnf.children().stream().map(cn -> Pair.of(cn, dnf.metadata())).toList());
                 } else {
-                    building.add(List.of(child));
+                    building.add(List.of(Pair.of(child, new PropertySet())));
                 }
             }
 
             cartesianProduct(building, 0, new ArrayList<>(), products -> {
-                ConstraintTree parent = new ConstraintTree(Constraint.multi(Operation.AND, products.stream().map(ConstraintNode::constraint).toList()), Operation.AND).attach(products.stream().map(ConstraintNode::copy).toList());
+                ConstraintTree parent = new ConstraintTree(Constraint.multi(Operation.AND, products.stream().map(p -> p.left().constraint()).toList()), Operation.AND).attach(products.stream().map(p -> p.left().copy()).toList());
                 parent.metadata().copyFrom(this.metadata);
+                products.forEach(p -> parent.metadata().inheritFrom(p.right()));
                 or.attach(parent);
             });
         }

@@ -66,16 +66,16 @@ public class SolveResult {
                 .append("#################### Valid Branches ####################\n")
                 .append(this.validBranches().stream().map(br -> toString(br, useSimpleName)).collect(Collectors.joining("\n\n")))
                 .append("\n#################### Other Branches ####################\n")
-                .append(this.invalidBranches().stream().map(br -> toString(br, useSimpleName)).collect(Collectors.joining("\n")));
+                .append(this.invalidBranches().stream().map(br -> toString(br, useSimpleName)).collect(Collectors.joining("\n\n")));
         return sb.toString();
     }
 
     private String toString(ConstraintNode branch, boolean useSimpleName) {
         Set<Object> metadata = branch.metadata().all(Object.class);
         if (metadata.isEmpty()) {
-            return "- Metadata: empty\n- Tree:\n" + branch.toString(useSimpleName);
+            return "Metadata: empty\nTree:\n" + branch.toString(useSimpleName);
         } else {
-            return "- Metadata: \n" +
+            return "Metadata: \n" +
                     metadata.stream().map(String::valueOf).collect(Collectors.joining("\n")) +
                     "\n- Tree: \n" + branch.toString(useSimpleName);
         }
