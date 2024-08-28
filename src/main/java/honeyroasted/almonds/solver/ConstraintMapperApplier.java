@@ -78,9 +78,9 @@ public class ConstraintMapperApplier implements ConstraintMapper {
                 boolean restart = false;
                 if (current instanceof ConstraintTree tree) { //Should always be true due to disjunctive form
                     Set<ConstraintNode> children = new LinkedHashSet<>(tree.children());
-                    PropertySet branchMetadata = tree.metadata();
 
                     for (ConstraintNode child : children) {
+                        PropertySet branchMetadata = child.metadata();
                         PropertySet instanceContext = new PropertySet().inheritFrom(context);
 
                         if (child instanceof ConstraintLeaf leaf) {
