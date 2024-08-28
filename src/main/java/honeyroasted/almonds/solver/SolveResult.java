@@ -63,10 +63,16 @@ public class SolveResult {
                 .append("Success: ").append(this.constraintTree.status().asBoolean()).append("\n")
                 .append("Branches: ").append(this.branches().size()).append(" total, ").append(this.validBranches().size()).append(" valid\n")
                 .append("#################### Valid Branches ####################\n")
-                .append(this.validBranches().stream().map(br -> br.toString(useSimpleName)).collect(Collectors.joining("\n\n")))
+                .append(this.validBranches().stream().map(br -> toString(br, useSimpleName)).collect(Collectors.joining("\n\n")))
                 .append("\n#################### Other Branches ####################\n")
-                .append(this.invalidBranches().stream().map(br -> br.toString(useSimpleName)).collect(Collectors.joining("\n")));
+                .append(this.invalidBranches().stream().map(br -> toString(br, useSimpleName)).collect(Collectors.joining("\n")));
         return sb.toString();
+    }
+
+    private String toString(ConstraintNode branch, boolean useSimpleName) {
+        return "Metadata: \n" + branch.metadata().all(Object.class)
+                .stream().map(String::valueOf).collect(Collectors.joining("\n")) +
+                "\nTree: \n" + branch.toString(useSimpleName);
     }
 
 }
