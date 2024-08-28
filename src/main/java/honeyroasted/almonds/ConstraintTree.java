@@ -328,7 +328,7 @@ public final class ConstraintTree implements ConstraintNode {
                 if (child instanceof ConstraintTree dnf && dnf.operation == Operation.OR) {
                     building.add(dnf.children().stream().map(cn -> Pair.of(cn, dnf.metadata())).toList());
                 } else {
-                    building.add(List.of(Pair.of(child, new PropertySet())));
+                    building.add(List.of(Pair.of(child, child.metadata())));
                 }
             }
 
