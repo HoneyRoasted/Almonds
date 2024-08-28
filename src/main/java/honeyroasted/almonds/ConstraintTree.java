@@ -308,9 +308,9 @@ public final class ConstraintTree implements ConstraintNode {
     @Override
     public ConstraintNode disjunctiveForm() {
         ConstraintTree or = new ConstraintTree(this.constraint, Operation.OR);
-        or.metadata().copyFrom(this.metadata);
 
         if (this.operation == Operation.OR) {
+            or.metadata().copyFrom(this.metadata);
             this.children().forEach(cn -> {
                 ConstraintNode disjunct = cn.disjunctiveForm();
                 if (disjunct instanceof ConstraintTree tree && tree.operation == Operation.OR) {
@@ -324,11 +324,12 @@ public final class ConstraintTree implements ConstraintNode {
             Set<ConstraintNode> children = this.children().stream().map(ConstraintNode::disjunctiveForm).collect(Collectors.toCollection(LinkedHashSet::new));
 
             List<List<Pair<ConstraintNode, PropertySet>>> building = new ArrayList<>();
+            PropertySet empty = new PropertySet();
             for (ConstraintNode child : children) {
                 if (child instanceof ConstraintTree dnf && dnf.operation == Operation.OR) {
                     building.add(dnf.children().stream().map(cn -> Pair.of(cn, dnf.metadata())).toList());
                 } else {
-                    building.add(List.of(Pair.of(child, child.metadata())));
+                    building.add(List.of(Pair.of(child, empty)));
                 }
             }
 
