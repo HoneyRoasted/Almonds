@@ -18,7 +18,7 @@ public class ConstraintBranch implements ChangingMergingElement<ConstraintBranch
     private ConstraintTree parent;
 
     private PropertySet metadata = new PropertySet();
-    private Map<Constraint, Constraint.Status> constraints = new ConcurrentHashMap<>();
+    private Map<Constraint, Constraint.Status> constraints = new ConcurrentHashMap<>(16, 0.75f, 1);
 
     private boolean shouldTrackDivergence = false;
     private Set<ConstraintBranch> divergence;
