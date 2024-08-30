@@ -33,7 +33,7 @@ public class ConstraintMapperApplier implements ConstraintMapper {
                 boolean restart = false;
 
                 for (ConstraintBranch sub : branches) {
-                    if (sub.trimmed()) {
+                    if (!sub.trimmed()) {
                         sub.setShouldTrackDivergence(true);
                         mapper.accept(sub);
 
@@ -63,11 +63,12 @@ public class ConstraintMapperApplier implements ConstraintMapper {
 
             for (ExclusiveChangeAwareSet<ConstraintBranch>.StopOnModifyIterator it = tree.currentBranches().stopOnModifyIterator(); it.hasNext(); ) {
                 ConstraintBranch branch = it.next();
-
-                branch.setShouldTrackDivergence(false);
-                for (ConstraintMapper mapper : this.mappers) {
-                    mapper.accept(branch);
-                    if (it.isDiverged()) break;
+                if (!branch.trimmed()) {
+                    branch.setShouldTrackDivergence(false);
+                    for (ConstraintMapper mapper : this.mappers) {
+                        mapper.accept(branch);
+                        if (it.isDiverged()) break;
+                    }
                 }
                 if (it.isDiverged()) break;
             }
