@@ -15,7 +15,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.github.HoneyRoasted:Collect:150a5ad522")
+    implementation("com.github.HoneyRoasted:Collect:400dedca83")
 
     testImplementation('org.ow2.asm:asm:9.5',
             'org.ow2.asm:asm-util:9.5',

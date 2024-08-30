@@ -1,14 +1,9 @@
 package honeyroasted.almonds;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 public interface Constraint {
     Constraint TRUE = new True();
@@ -17,14 +12,6 @@ public interface Constraint {
     String simpleName();
 
     List<Object> parameters();
-
-    default ConstraintLeaf createLeaf() {
-        return new ConstraintLeaf(this);
-    }
-
-    default ConstraintTree createTree(ConstraintNode.Operation op) {
-        return new ConstraintTree(this, op);
-    }
 
     default  <T extends Constraint> T createNew(List<?> parameters) {
         try {
@@ -35,22 +22,8 @@ public interface Constraint {
         }
     }
 
-    static Constraint preserved(Constraint constraint) {
-        return new Information(constraint);
-    }
-
     static Constraint label(String name) {
         return new Label(name);
-    }
-
-    static Constraint multi(ConstraintNode.Operation operation, Collection<Constraint> children) {
-        return new Multi(operation, new LinkedHashSet<>(children));
-    }
-
-    static Constraint multi(ConstraintNode.Operation operation, Constraint... constraints) {
-        Set<Constraint> children = new LinkedHashSet<>();
-        Collections.addAll(children, constraints);
-        return new Multi(operation, children);
     }
 
     static Constraint solve() {
@@ -251,75 +224,116 @@ public interface Constraint {
 
     }
 
-    class Information extends Unary<Constraint> {
+    enum Status {
+        TRUE {
+            @Override
+            public boolean isTrue() {
+                return true;
+            }
 
-        public Information(Constraint value) {
-            super(value);
+            @Override
+            public boolean isKnown() {
+                return true;
+            }
+
+            @Override
+            public Status and(Status other) {
+                return other;
+            }
+
+            @Override
+            public Status or(Status other) {
+                return this;
+            }
+        },
+        ASSUMED {
+            @Override
+            public boolean isTrue() {
+                return true;
+            }
+
+            @Override
+            public boolean isKnown() {
+                return false;
+            }
+
+            @Override
+            public Status and(Status other) {
+                return other == TRUE ? this : other;
+            }
+
+            @Override
+            public Status or(Status other) {
+                return other == TRUE ? other : this;
+            }
+        },
+        FALSE {
+            @Override
+            public boolean isTrue() {
+                return false;
+            }
+
+            @Override
+            public boolean isKnown() {
+                return true;
+            }
+
+            @Override
+            public Status and(Status other) {
+                return this;
+            }
+
+            @Override
+            public Status or(Status other) {
+                return other;
+            }
+        },
+        UNKNOWN {
+            @Override
+            public boolean isTrue() {
+                return false;
+            }
+
+            @Override
+            public boolean isKnown() {
+                return false;
+            }
+
+            @Override
+            public Status and(Status other) {
+                return other == FALSE ? other : this;
+            }
+
+            @Override
+            public Status or(Status other) {
+                return other == TRUE || other == ASSUMED ? other : this;
+            }
+        };
+
+
+        public static Status known(boolean value) {
+            return value ? TRUE : FALSE;
         }
 
-        @Override
-        public String simpleName() {
-            return "info(" + this.value().simpleName() + ")";
+        public static Status unknown(boolean value) {
+            return value ? ASSUMED : UNKNOWN;
         }
 
-        @Override
-        public String toString() {
-            return "INFORMATIONAL: " + this.value();
-        }
-    }
+        public abstract boolean isTrue();
 
-    class Multi implements Constraint {
-        private ConstraintNode.Operation operation;
-        private Set<Constraint> constraints;
-
-        public Multi(ConstraintNode.Operation operation, Set<Constraint> constraints) {
-            this.operation = operation;
-            this.constraints = constraints;
+        public boolean isFalse() {
+            return !isTrue();
         }
 
-        public ConstraintNode.Operation operation() {
-            return this.operation;
+        public abstract boolean isKnown();
+
+        public boolean isUnknown() {
+            return !isKnown();
         }
 
-        public Set<Constraint> constraints() {
-            return this.constraints;
-        }
+        public abstract Status and(Status other);
 
-        @Override
-        public String simpleName() {
-            return "(" + this.constraints.stream().map(Constraint::simpleName).collect(Collectors.joining(" " + this.operation.operator() + " ")) + ")";
-        }
-
-        @Override
-        public String toString() {
-            return this.operation + "(" + this.constraints.stream().map(Constraint::toString).collect(Collectors.joining(", ")) + ")";
-        }
-
-        @Override
-        public List<Object> parameters() {
-            List<Object> params = new ArrayList<>();
-            params.add(this.operation);
-            params.addAll(this.constraints);
-            return params;
-        }
-
-        @Override
-        public <T extends Constraint> T createNew(List<?> parameters) {
-            return (T) new Multi((ConstraintNode.Operation) parameters.get(0), parameters.subList(1, parameters.size()).stream().map(t -> (Constraint) t).collect(Collectors.toCollection(LinkedHashSet::new)));
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            Multi multi = (Multi) o;
-            return operation == multi.operation && Objects.equals(constraints, multi.constraints);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(operation, constraints);
-        }
+        public abstract Status or(Status other);
     }
 
 }
