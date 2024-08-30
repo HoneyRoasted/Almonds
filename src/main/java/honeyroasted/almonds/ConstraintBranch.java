@@ -130,9 +130,9 @@ public class ConstraintBranch implements ChangingMergingElement<ConstraintBranch
 
     public ConstraintBranch setStatus(Constraint constraint, Constraint.Status status) {
         this.parent.currentBranches().doChange(this, () -> {
-            if (status == Constraint.Status.FALSE) this.setTrimmed(true);
             Constraint.Status current = this.constraints.get(constraint);
             if (current != null && current != status) {
+                if (status == Constraint.Status.FALSE) this.setTrimmed(true);
                 this.constraints.put(constraint, status);
                 return true;
             }
