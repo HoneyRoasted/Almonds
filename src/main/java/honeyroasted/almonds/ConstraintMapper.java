@@ -33,15 +33,18 @@ public interface ConstraintMapper extends Consumer<ConstraintBranch> {
     }
 
     abstract class All implements ConstraintMapper {
-
-        @Override
-        public void accept(ConstraintBranch branch) {
-            PropertySet allContext = branch.parent().metadata();
-            PropertySet branchContext = branch.metadata();
-            this.accept(allContext, branchContext, branch);
-        }
+        protected abstract boolean filter(PropertySet allContext, PropertySet branchContext, ConstraintBranch branch);
 
         protected abstract void accept(PropertySet allContext, PropertySet branchContext, ConstraintBranch branch);
+
+        @Override
+        public final void accept(ConstraintBranch branch) {
+            PropertySet allContext = branch.parent().metadata();
+            PropertySet branchContext = branch.metadata();
+            if (filter(allContext, branchContext, branch)) {
+                this.accept(allContext, branchContext, branch);
+            }
+        }
     }
 
     abstract class Unary<T extends Constraint> implements ConstraintMapper {
@@ -55,8 +58,14 @@ public interface ConstraintMapper extends Consumer<ConstraintBranch> {
             this.type = (Class<T>) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0];
         }
 
+        protected boolean filter(PropertySet allContext, PropertySet branchContext, ConstraintBranch branch, T constraint, Constraint.Status status) {
+            return true;
+        }
+
+        protected abstract void accept(PropertySet allContext, PropertySet branchContext, ConstraintBranch branch, T constraint, Constraint.Status status);
+
         @Override
-        public void accept(ConstraintBranch branch) {
+        public final void accept(ConstraintBranch branch) {
             PropertySet allContext = branch.parent().metadata();
             PropertySet branchContext = branch.metadata();
 
@@ -70,12 +79,6 @@ public interface ConstraintMapper extends Consumer<ConstraintBranch> {
                 }
             }
         }
-
-        protected boolean filter(PropertySet allContext, PropertySet branchContext, ConstraintBranch branch, T constraint, Constraint.Status status) {
-            return true;
-        }
-
-        protected abstract void accept(PropertySet allContext, PropertySet branchContext, ConstraintBranch branch, T constraint, Constraint.Status status);
     }
 
     abstract class Binary<L extends Constraint, R extends Constraint> implements ConstraintMapper {
@@ -104,8 +107,10 @@ public interface ConstraintMapper extends Consumer<ConstraintBranch> {
             return true;
         }
 
+        protected abstract void accept(PropertySet allContext, PropertySet branchContext, ConstraintBranch branch, L leftConstraint, Constraint.Status leftStatus, R rightConstraint, Constraint.Status rightStatus);
+
         @Override
-        public void accept(ConstraintBranch branch) {
+        public final void accept(ConstraintBranch branch) {
             PropertySet allContext = branch.parent().metadata();
             PropertySet branchContext = branch.metadata();
 
@@ -130,8 +135,6 @@ public interface ConstraintMapper extends Consumer<ConstraintBranch> {
                 }
             }
         }
-
-        protected abstract void accept(PropertySet allContext, PropertySet branchContext, ConstraintBranch branch, L leftConstraint, Constraint.Status leftStatus, R rightConstraint, Constraint.Status rightStatus);
     }
 
 }
