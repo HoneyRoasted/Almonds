@@ -23,6 +23,8 @@ public class ConstraintBranch implements ChangingMergingElement<ConstraintBranch
     private boolean shouldTrackDivergence = false;
     private Set<ConstraintBranch> divergence;
 
+    private boolean trimmed;
+
     public record Snapshot(PropertySet metadata, Map<Constraint, Constraint.Status> constraints) {};
 
     public ConstraintBranch(ConstraintTree parent) {
@@ -44,6 +46,15 @@ public class ConstraintBranch implements ChangingMergingElement<ConstraintBranch
 
     public ConstraintTree parent() {
         return this.parent;
+    }
+
+    public boolean trimmed() {
+        return this.trimmed;
+    }
+
+    public ConstraintBranch setTrimmed(boolean trimmed) {
+        this.trimmed = trimmed;
+        return this;
     }
 
     public Map<Constraint, Constraint.Status> constraints() {
@@ -119,6 +130,7 @@ public class ConstraintBranch implements ChangingMergingElement<ConstraintBranch
 
     public ConstraintBranch setStatus(Constraint constraint, Constraint.Status status) {
         this.parent.currentBranches().doChange(this, () -> {
+            if (status == Constraint.Status.FALSE) this.setTrimmed(true);
             Constraint.Status current = this.constraints.get(constraint);
             if (current != null && current != status) {
                 this.constraints.put(constraint, status);
@@ -131,6 +143,7 @@ public class ConstraintBranch implements ChangingMergingElement<ConstraintBranch
 
     public ConstraintBranch add(Constraint constraint, Constraint.Status status) {
         this.parent.currentBranches().doChange(this, () -> {
+            if (status == Constraint.Status.FALSE) this.setTrimmed(true);
             Object prev = this.constraints.putIfAbsent(constraint, status);
             return prev == null;
         });

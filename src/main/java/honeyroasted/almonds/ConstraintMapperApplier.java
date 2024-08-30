@@ -33,16 +33,18 @@ public class ConstraintMapperApplier implements ConstraintMapper {
                 boolean restart = false;
 
                 for (ConstraintBranch sub : branches) {
-                    sub.setShouldTrackDivergence(true);
-                    mapper.accept(sub);
+                    if (sub.trimmed()) {
+                        sub.setShouldTrackDivergence(true);
+                        mapper.accept(sub);
 
-                    Set<ConstraintBranch> diverged = sub.divergence();
-                    if (!diverged.isEmpty()) {
-                        branches.remove(sub);
-                        branches.addAll(diverged);
+                        Set<ConstraintBranch> diverged = sub.divergence();
+                        if (!diverged.isEmpty()) {
+                            branches.remove(sub);
+                            branches.addAll(diverged);
 
-                        restart = true;
-                        break;
+                            restart = true;
+                            break;
+                        }
                     }
                 }
                 if (restart) break;
