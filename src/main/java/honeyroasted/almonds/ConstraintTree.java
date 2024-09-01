@@ -1,9 +1,13 @@
 package honeyroasted.almonds;
 
-import honeyroasted.collect.change.ExclusiveChangeAwareSet;
 import honeyroasted.collect.property.PropertySet;
 
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -11,15 +15,9 @@ import java.util.stream.Collectors;
 
 public class ConstraintTree {
     private PropertySet metadata = new PropertySet();
-    private ExclusiveChangeAwareSet<ConstraintBranch> branches;
 
-    public ConstraintTree(int initialCapacity) {
-        this.branches = new ExclusiveChangeAwareSet<>(initialCapacity);
-    }
-
-    public ConstraintTree() {
-        this(1024);
-    }
+    private Set<ConstraintBranch> active = new LinkedHashSet<>();
+    private Map<ConstraintBranch, ConstraintBranch> branches = new LinkedHashMap<>();
 
     public int numBranches() {
         return this.branches.size();
@@ -34,14 +32,18 @@ public class ConstraintTree {
     }
 
     public Set<ConstraintBranch> branches(Predicate<ConstraintBranch> filter) {
-        return this.branches.stream().filter(filter).collect(Collectors.toUnmodifiableSet());
+        return this.branches.keySet().stream().filter(filter).collect(Collectors.toUnmodifiableSet());
+    }
+
+    public Set<ConstraintBranch> active() {
+        return this.active;
     }
 
     public Set<ConstraintBranch> branches() {
-        return this.branches.setCopy();
+        return Collections.unmodifiableSet(new HashSet<>(this.branches.keySet()));
     }
 
-    ExclusiveChangeAwareSet<ConstraintBranch> currentBranches() {
+    public Map<ConstraintBranch, ConstraintBranch> currentBranches() {
         return this.branches;
     }
 
@@ -49,7 +51,8 @@ public class ConstraintTree {
         if (this.branches.isEmpty()) {
             return Constraint.Status.UNKNOWN;
         } else {
-            Iterator<ConstraintBranch> iter = this.branches.iterator();;
+            Iterator<ConstraintBranch> iter = this.branches.keySet().iterator();
+            ;
             Constraint.Status curr = iter.next().status();
             while (iter.hasNext()) {
                 curr = curr.or(iter.next().status());
@@ -101,15 +104,46 @@ public class ConstraintTree {
         return Objects.hashCode(this.branches);
     }
 
-    public void addBranch(ConstraintBranch newBranch) {
-        this.branches.add(newBranch);
+
+    public boolean executeChanges() {
+        boolean modified = false;
+
+        Map<ConstraintBranch, ConstraintBranch> newBranches = new LinkedHashMap<>();
+        Set<ConstraintBranch> newActive = new LinkedHashSet<>();
+
+        for (ConstraintBranch branch : this.branches.keySet()) {
+            if (branch.diverged()) {
+                branch.divergence().forEach(newBranch -> {
+                    newBranch.executeChanges();
+                    addBranch(newBranch, newBranches, newActive);
+                });
+                modified = true;
+            } else {
+                boolean changed = branch.executeChanges();
+                addBranch(branch, newBranches, newActive);
+                modified |= changed;
+            }
+        }
+        this.branches = newBranches;
+        this.active = newActive;
+
+        return modified;
     }
 
-    public void removeBranch(ConstraintBranch constraintBranch) {
-        this.branches.remove(constraintBranch);
+    public void addBranch(ConstraintBranch branch) {
+        addBranch(branch, this.branches, this.active);
+    }
+
+    private static void addBranch(ConstraintBranch branch, Map<ConstraintBranch, ConstraintBranch> branches, Set<ConstraintBranch> active) {
+        ConstraintBranch prev = branches.putIfAbsent(branch, branch);
+        if (prev != null) {
+            prev.metadata().inheritFrom(branch.metadata());
+        } else if (!branch.trimmed()) {
+            active.add(branch);
+        }
     }
 
     public boolean has(ConstraintBranch branch) {
-        return this.branches.contains(branch);
+        return this.branches.containsKey(branch);
     }
 }

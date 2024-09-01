@@ -42,7 +42,7 @@ public class ConstraintSolver {
     }
 
     public ConstraintTree solve(PropertySet context) {
-        ConstraintTree tree = new ConstraintTree(this.capacityFactor < 0 ? -this.capacityFactor : (this.constraints.size() * capacityFactor));
+        ConstraintTree tree = new ConstraintTree();
         tree.metadata().inheritFrom(context);
         tree.metadata().inheritFrom(this.context);
 

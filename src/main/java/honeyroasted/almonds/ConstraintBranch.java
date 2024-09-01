@@ -1,47 +1,77 @@
 package honeyroasted.almonds;
 
-import honeyroasted.collect.change.ChangingMergingElement;
 import honeyroasted.collect.property.PropertySet;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 
-public class ConstraintBranch implements ChangingMergingElement<ConstraintBranch> {
+public class ConstraintBranch {
     private ConstraintTree parent;
 
     private PropertySet metadata = new PropertySet();
-    private Map<Constraint, Constraint.Status> constraints = new ConcurrentHashMap<>(16, 0.75f, 1);
+    private Map<Constraint, Constraint.Status> constraints = new LinkedHashMap<>();
 
-    private boolean shouldTrackDivergence = false;
-    private Set<ConstraintBranch> divergence;
+    private List<ConstraintBranch> divergence;
+    private List<Predicate<ConstraintBranch>> changes = new ArrayList<>();
 
     private boolean trimmed;
 
-    public record Snapshot(PropertySet metadata, Map<Constraint, Constraint.Status> constraints) {};
+    public record Snapshot(PropertySet metadata, Map<Constraint, Constraint.Status> constraints) {
+        private static final Snapshot empty = new Snapshot(new PropertySet(), Collections.unmodifiableMap(new HashMap<>()));
+
+        public static Snapshot empty() {
+            return empty;
+        }
+
+    }
 
     public ConstraintBranch(ConstraintTree parent) {
         this.parent = parent;
     }
 
+    public boolean executeChanges() {
+        boolean modified = false;
+        for (Predicate<ConstraintBranch> change : this.changes) {
+            if (change.test(this)) {
+                modified = true;
+            }
+        }
+        this.changes.clear();
+        return modified;
+    }
+
+    private void change(Predicate<ConstraintBranch> change) {
+        this.changes.add(change);
+        if (this.divergence != null) {
+            this.divergence.forEach(cb -> cb.change(change));
+        }
+    }
+
     public ConstraintBranch copy(ConstraintTree parent) {
-        ConstraintBranch snap = new ConstraintBranch(parent);
-        snap.metadata.copyFrom(this.metadata);
-        snap.constraints.putAll(this.constraints);
-        return snap;
+        ConstraintBranch copy = new ConstraintBranch(parent);
+        copy.metadata.copyFrom(this.metadata);
+        copy.constraints.putAll(this.constraints);
+        copy.changes.addAll(this.changes);
+        return copy;
     }
 
     public Snapshot snapshot() {
         PropertySet snapMeta = new PropertySet().copyFrom(metadata);
-        Map<Constraint, Constraint.Status> snapConstraints = new HashMap<>(this.constraints);
+        Map<Constraint, Constraint.Status> snapConstraints = new LinkedHashMap<>(this.constraints);
         return new Snapshot(snapMeta, snapConstraints);
+    }
+
+    public boolean diverged() {
+        return this.divergence != null && !this.divergence.isEmpty();
     }
 
     public ConstraintTree parent() {
@@ -52,13 +82,8 @@ public class ConstraintBranch implements ChangingMergingElement<ConstraintBranch
         return this.trimmed;
     }
 
-    public ConstraintBranch setTrimmed(boolean trimmed) {
-        this.trimmed = trimmed;
-        return this;
-    }
-
     public Map<Constraint, Constraint.Status> constraints() {
-        return Collections.unmodifiableMap(this.constraints);
+        return Collections.unmodifiableMap(new HashMap<>(this.constraints));
     }
 
     public int size() {
@@ -94,46 +119,89 @@ public class ConstraintBranch implements ChangingMergingElement<ConstraintBranch
         this.divergeBranches(constraints.stream().map(mp -> new Snapshot(new PropertySet(), (Map) mp)).toList());
     }
 
-    public void divergeBranches(List<Snapshot> branches) {
-        if (branches.size() == 1) {
-            branches.forEach(snap -> {
-                this.metadata.inheritFrom(snap.metadata);
-                snap.constraints.forEach((con, stat) -> {
-                    this.add(con);
-                    this.setStatus(con, stat);
-                });
-            });
-        } else if (!branches.isEmpty()) {
-            if (divergence == null && shouldTrackDivergence) this.divergence = new HashSet<>();
+    public List<ConstraintBranch> divergence() {
+        return this.divergence == null ? Collections.emptyList() : divergence;
+    }
 
-            this.parent.removeBranch(this);
-            branches.forEach(snap -> {
-                ConstraintBranch newBranch = new ConstraintBranch(this.parent);
-                newBranch.metadata().copyFrom(this.metadata);
-                newBranch.metadata.inheritFrom(snap.metadata);
-                newBranch.constraints.putAll(this.constraints);
-                snap.constraints.forEach((con, stat) -> newBranch.constraints.putIfAbsent(con, stat));
-                this.parent.addBranch(newBranch);
-                if (shouldTrackDivergence) this.divergence.add(newBranch);
-            });
+
+    public void divergeBranches(List<Snapshot> branches) {
+        if (!branches.isEmpty()) {
+            if (!this.diverged() && branches.size() == 1) {
+                //Just adding the branch to this one
+                branches.forEach(branch -> {
+                    this.metadata.inheritFrom(branch.metadata);
+                    branch.constraints().forEach(this::add);
+                });
+            } else {
+                if (this.divergence == null) this.divergence = new ArrayList<>();
+
+                if (this.divergence.isEmpty()) {
+                    branches.forEach(branch -> {
+                        ConstraintBranch newBranch = this.copy(this.parent);
+                        newBranch.metadata().inheritFrom(branch.metadata());
+
+                        branch.constraints().forEach(newBranch::add);
+                        newBranch.executeChanges();
+                        this.divergence.add(newBranch);
+                    });
+                } else {
+                    List<ConstraintBranch> newDiverge = new ArrayList<>();
+                    for (Snapshot snapshot : branches) {
+                        for (ConstraintBranch diverge : this.divergence) {
+                            ConstraintBranch newBranch = this.copy(this.parent);
+                            newBranch.metadata().inheritFrom(diverge.metadata)
+                                    .inheritFrom(snapshot.metadata);
+
+                            diverge.constraints().forEach(newBranch::add);
+                            snapshot.constraints().forEach(newBranch::add);
+                            newBranch.executeChanges();
+
+                            newDiverge.add(newBranch);
+                        }
+                    }
+                    this.divergence = newDiverge;
+                }
+            }
         }
     }
 
-    public ConstraintBranch setShouldTrackDivergence(boolean shouldTrackDivergence) {
-        this.shouldTrackDivergence = shouldTrackDivergence;
+    //Changes ---------
+
+    public ConstraintBranch put(Constraint constraint, Constraint.Status status) {
+        this.change(branch -> {
+            Constraint.Status current = branch.constraints.get(constraint);
+            branch.constraints.put(constraint, status);
+            if (status == Constraint.Status.FALSE) branch.trimmed = true;
+            return current == null || current != status;
+        });
         return this;
     }
 
-    public Set<ConstraintBranch> divergence() {
-        return this.divergence == null ? Collections.emptySet() : divergence;
+    public ConstraintBranch add(Constraint constraint, Constraint.Status status) {
+        this.change(branch -> {
+            Object prev = branch.constraints.putIfAbsent(constraint, status);
+            if (prev == null && status == Constraint.Status.FALSE) branch.trimmed = true;
+            return prev == null;
+        });
+        return this;
     }
 
-    public ConstraintBranch setStatus(Constraint constraint, Constraint.Status status) {
-        this.parent.currentBranches().doChange(this, () -> {
-            Constraint.Status current = this.constraints.get(constraint);
-            if (current != null && current != status) {
-                if (status == Constraint.Status.FALSE) this.setTrimmed(true);
-                this.constraints.put(constraint, status);
+    public ConstraintBranch drop(Constraint constraint) {
+        this.change(branch -> {
+            Constraint.Status prev = branch.constraints.remove(constraint);
+            if (prev == Constraint.Status.FALSE) branch.trimmed = branch.status() == Constraint.Status.FALSE;
+            return prev != null;
+        });
+        return this;
+    }
+
+
+    public ConstraintBranch set(Constraint constraint, Constraint.Status status) {
+        this.change(branch -> {
+            Constraint.Status curr = branch.constraints.get(constraint);
+            if (curr == null || curr != status) {
+                if (status == Constraint.Status.FALSE) branch.trimmed = true;
+                branch.constraints.put(constraint, status);
                 return true;
             }
             return false;
@@ -141,25 +209,10 @@ public class ConstraintBranch implements ChangingMergingElement<ConstraintBranch
         return this;
     }
 
-    public ConstraintBranch add(Constraint constraint, Constraint.Status status) {
-        this.parent.currentBranches().doChange(this, () -> {
-            if (status == Constraint.Status.FALSE) this.setTrimmed(true);
-            Object prev = this.constraints.putIfAbsent(constraint, status);
-            return prev == null;
-        });
-        return this;
-    }
+    //---------------------------
 
     public ConstraintBranch add(Constraint constraint) {
         return this.add(constraint, Constraint.Status.UNKNOWN);
-    }
-
-    public ConstraintBranch drop(Constraint constraint) {
-        this.parent.currentBranches().doChange(this, () -> {
-            Constraint.Status prev = this.constraints.remove(constraint);
-            return prev != null;
-        });
-        return this;
     }
 
     public String toString(boolean simpleName, String indent) {
@@ -192,11 +245,5 @@ public class ConstraintBranch implements ChangingMergingElement<ConstraintBranch
     @Override
     public int hashCode() {
         return Objects.hash(constraints.keySet());
-    }
-
-    @Override
-    public void merge(ConstraintBranch other) {
-        this.metadata.inheritFrom(other.metadata);
-        other.metadata.inheritFrom(this.metadata);
     }
 }

@@ -16,7 +16,7 @@ public interface ConstraintMapper extends Consumer<ConstraintBranch> {
 
         @Override
         protected void accept(PropertySet allContext, PropertySet branchContext, ConstraintBranch branch, Constraint.True constraint, Constraint.Status status) {
-            branch.setStatus(constraint, Constraint.Status.TRUE);
+            branch.set(constraint, Constraint.Status.TRUE);
         }
     }
 
@@ -28,7 +28,7 @@ public interface ConstraintMapper extends Consumer<ConstraintBranch> {
 
         @Override
         protected void accept(PropertySet allContext, PropertySet branchContext, ConstraintBranch branch, Constraint.False constraint, Constraint.Status status) {
-            branch.setStatus(constraint, Constraint.Status.FALSE);
+            branch.set(constraint, Constraint.Status.FALSE);
         }
     }
 

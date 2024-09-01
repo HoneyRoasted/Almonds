@@ -1,78 +1,68 @@
 package honeyroasted.almonds;
 
-import honeyroasted.collect.change.ExclusiveChangeAwareSet;
-
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ConstraintMapperApplier implements ConstraintMapper {
     private List<ConstraintMapper> mappers;
 
     public ConstraintMapperApplier(List<ConstraintMapper> mappers) {
-        this.mappers = mappers;
+        this.mappers = Collections.unmodifiableList(mappers);
+    }
+
+    public List<ConstraintMapper> mappers() {
+        return this.mappers;
+    }
+
+    public List<ConstraintMapper> flattened() {
+        List<ConstraintMapper> flat = new ArrayList<>();
+        this.mappers.forEach(cm -> {
+            if (cm instanceof ConstraintMapperApplier cma) {
+                flat.addAll(cma.flattened());
+            } else {
+                flat.add(cm);
+            }
+        });
+        return flat;
     }
 
     @Override
     public void accept(ConstraintBranch branch) {
         ConstraintTree tree = branch.parent();
 
-        AtomicBoolean modified = new AtomicBoolean(false);
-        Runnable listener = () -> modified.set(true);
-        tree.currentBranches().addListener(listener);
-
-        Set<ConstraintBranch> branches = Collections.newSetFromMap(new IdentityHashMap<>());
+        List<ConstraintBranch> branches = new ArrayList<>();
         branches.add(branch);
 
         do {
-            modified.set(false);
-
-            for (ConstraintMapper mapper : this.mappers) {
-                boolean restart = false;
-
-                for (ConstraintBranch sub : branches) {
-                    if (!sub.trimmed()) {
-                        sub.setShouldTrackDivergence(true);
-                        mapper.accept(sub);
-
-                        Set<ConstraintBranch> diverged = sub.divergence();
-                        if (!diverged.isEmpty()) {
-                            branches.remove(sub);
-                            branches.addAll(diverged);
-
-                            restart = true;
-                            break;
-                        }
-                    }
+            for (ConstraintBranch sub : branches) {
+                for (ConstraintMapper mapper : this.mappers) {
+                    mapper.accept(sub);
                 }
-                if (restart) break;
             }
-        } while (modified.get());
-        tree.currentBranches().removeListener(listener);
+
+            List<ConstraintBranch> newTracked = new ArrayList<>();
+            for (ConstraintBranch sub : branches) {
+                if (sub.diverged()) {
+                    sub.divergence().forEach(cb -> {
+                        if (!cb.trimmed()) newTracked.add(cb);
+                    });
+                } else if (!sub.trimmed()) {
+                    newTracked.add(sub);
+                }
+            }
+            branches = newTracked;
+
+        } while (tree.executeChanges());
     }
 
     public void accept(ConstraintTree tree) {
-        AtomicBoolean modified = new AtomicBoolean(false);
-        Runnable listener = () -> modified.set(true);
-        tree.currentBranches().addListener(listener);
-
         do {
-            modified.set(false);
-
-            for (ExclusiveChangeAwareSet<ConstraintBranch>.StopOnModifyIterator it = tree.currentBranches().stopOnModifyIterator(); it.hasNext(); ) {
-                ConstraintBranch branch = it.next();
-                if (!branch.trimmed()) {
-                    branch.setShouldTrackDivergence(false);
-                    for (ConstraintMapper mapper : this.mappers) {
-                        mapper.accept(branch);
-                        if (it.isDiverged()) break;
-                    }
+            for (ConstraintBranch branch : tree.active()) {
+                for (ConstraintMapper mapper : this.mappers) {
+                    mapper.accept(branch);
                 }
-                if (it.isDiverged()) break;
             }
-        } while (modified.get());
-        tree.currentBranches().removeListener(listener);
+        } while (tree.executeChanges());
     }
 }
