@@ -65,8 +65,11 @@ public class ConstraintBranch {
     }
 
     public Snapshot snapshot() {
-        PropertySet snapMeta = new PropertySet().copyFrom(metadata);
-        Map<Constraint, Constraint.Status> snapConstraints = new LinkedHashMap<>(this.constraints);
+        ConstraintBranch copy = this.copy(this.parent);
+        copy.executeChanges();
+
+        PropertySet snapMeta = new PropertySet().copyFrom(copy.metadata());
+        Map<Constraint, Constraint.Status> snapConstraints = new LinkedHashMap<>(copy.constraints());
         return new Snapshot(snapMeta, snapConstraints);
     }
 
