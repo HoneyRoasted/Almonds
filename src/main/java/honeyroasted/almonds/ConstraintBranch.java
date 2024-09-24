@@ -58,21 +58,23 @@ public class ConstraintBranch {
         }
     }
 
+    public ConstraintBranch copy() {
+        return this.copy(null);
+    }
+
     public ConstraintBranch copy(ConstraintTree parent) {
         ConstraintBranch copy = new ConstraintBranch(parent);
         copy.metadata.copyFrom(this.metadata);
         copy.constraints.putAll(this.constraints);
         copy.changes.addAll(this.changes);
+        copy.trimmed = this.trimmed;
         return copy;
     }
 
     public Snapshot snapshot() {
-        ConstraintBranch copy = this.copy(this.parent);
+        ConstraintBranch copy = this.copy();
         copy.executeChanges();
-
-        PropertySet snapMeta = new PropertySet().copyFrom(copy.metadata());
-        Map<Constraint, Constraint.Status> snapConstraints = new LinkedHashMap<>(copy.constraints());
-        return new Snapshot(snapMeta, snapConstraints);
+        return new Snapshot(copy.metadata, copy.constraints);
     }
 
     public boolean diverged() {
