@@ -3,9 +3,7 @@ package honeyroasted.almonds;
 import honeyroasted.collect.property.PropertySet;
 
 import java.lang.reflect.ParameterizedType;
-import java.util.Collections;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Consumer;
 
 public interface ConstraintMapper extends Consumer<ConstraintBranch> {
@@ -51,20 +49,13 @@ public interface ConstraintMapper extends Consumer<ConstraintBranch> {
 
     abstract class Unary<T extends Constraint> implements ConstraintMapper {
         private Class<T> type;
-        private boolean strict;
 
-        public Unary(Class<T> type, boolean strict) {
+        public Unary(Class<T> type) {
             this.type = type;
-            this.strict = true;
-        }
-
-        public Unary(boolean strict) {
-            this.type = (Class<T>) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0];
-            this.strict = strict;
         }
 
         public Unary() {
-            this(true);
+            this.type = (Class<T>) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0];
         }
 
         protected boolean filter(PropertySet allContext, PropertySet branchContext, ConstraintBranch branch, T constraint, Constraint.Status status) {
@@ -78,28 +69,12 @@ public interface ConstraintMapper extends Consumer<ConstraintBranch> {
             PropertySet allContext = branch.parent().metadata();
             PropertySet branchContext = branch.metadata();
 
-            if (this.strict) {
-                for (Constraint constraint : branch.typedConstraints().getOrDefault(this.type, Collections.emptySet())) {
-                    T con = (T) constraint;
-                    Constraint.Status status = branch.status(constraint);
-                    if (this.filter(allContext, branchContext, branch, con, status)) {
-                        this.accept(allContext, branchContext, branch, con, status);
+            for (Map.Entry<Constraint, Constraint.Status> entry : branch.constraints().entrySet()) {
+                if (this.type.isInstance(entry.getKey())) {
+                    T con = (T) entry.getKey();
+                    if (this.filter(allContext, branchContext, branch, con, entry.getValue())) {
+                        this.accept(allContext, branchContext, branch, con, entry.getValue());
                         if (!branch.parent().has(branch)) return;
-                    }
-                }
-            } else {
-                for (Map.Entry<Class<? extends Constraint>, Set<Constraint>> entry : branch.typedConstraints().entrySet()) {
-                    Class<? extends Constraint> t = entry.getKey();
-                    Set<Constraint> cons = entry.getValue();
-                    if (this.type.isAssignableFrom(t)) {
-                        for (Constraint constraint : cons) {
-                            T con = (T) constraint;
-                            Constraint.Status status = branch.status(constraint);
-                            if (this.filter(allContext, branchContext, branch, con, status)) {
-                                this.accept(allContext, branchContext, branch, con, status);
-                                if (!branch.parent().has(branch)) return;
-                            }
-                        }
                     }
                 }
             }
@@ -109,22 +84,15 @@ public interface ConstraintMapper extends Consumer<ConstraintBranch> {
     abstract class Binary<L extends Constraint, R extends Constraint> implements ConstraintMapper {
         private Class<L> left;
         private Class<R> right;
-        private boolean strict;
 
-        public Binary(Class<L> left, Class<R> right, boolean strict) {
+        public Binary(Class<L> left, Class<R> right) {
             this.left = left;
             this.right = right;
-            this.strict = strict;
-        }
-
-        public Binary(boolean strict) {
-            this.left = (Class<L>) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0];
-            this.right = (Class<R>) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[1];
-            this.strict = strict;
         }
 
         public Binary() {
-            this(true);
+            this.left = (Class<L>) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+            this.right = (Class<R>) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[1];
         }
 
         protected boolean filterLeft(PropertySet allContext, PropertySet branchContext, ConstraintBranch branch, L constraint, Constraint.Status status) {
@@ -146,37 +114,18 @@ public interface ConstraintMapper extends Consumer<ConstraintBranch> {
             PropertySet allContext = branch.parent().metadata();
             PropertySet branchContext = branch.metadata();
 
-            if (this.strict) {
-                for (Constraint leftConstraint : branch.typedConstraints().getOrDefault(this.left, Collections.emptySet())) {
-                    L left = (L) leftConstraint;
-                    Constraint.Status leftStat = branch.status(leftConstraint);
-                    if (this.filterLeft(allContext, branchContext, branch, left, leftStat)) {
-                        for (Constraint rightConstraint : branch.typedConstraints().getOrDefault(this.right, Collections.emptySet())) {
-                            R right = (R) rightConstraint;
-                            Constraint.Status rightStat = branch.status(rightConstraint);
-                            if (this.filterRight(allContext, branchContext, branch, right, rightStat)) {
-                                this.accept(allContext, branchContext, branch, left, leftStat, right, rightStat);
-                                if (!branch.parent().has(branch)) return;
-                            }
-                        }
-                    }
-                }
-            } else {
-                for (Map.Entry<Class<? extends Constraint>, Set<Constraint>> leftCons : branch.typedConstraints().entrySet()) {
-                    if (this.left.isAssignableFrom(leftCons.getKey())) {
-                        for (Map.Entry<Class<? extends Constraint>, Set<Constraint>> rightCons : branch.typedConstraints().entrySet()) {
-                            if (this.right.isAssignableFrom(rightCons.getKey())) {
-                                for (Constraint leftConstraint : leftCons.getValue()) {
-                                    L left = (L) leftConstraint;
-                                    Constraint.Status leftStat = branch.status(leftConstraint);
-                                    if (this.filterLeft(allContext, branchContext, branch, left, leftStat)) {
-                                        for (Constraint rightConstraint : rightCons.getValue()) {
-                                            R right = (R) rightConstraint;
-                                            Constraint.Status rightStat = branch.status(rightConstraint);
-                                            if (this.filterRight(allContext, branchContext, branch, right, rightStat)) {
-                                                this.accept(allContext, branchContext, branch, left, leftStat, right, rightStat);
-                                                if (!branch.parent().has(branch)) return;
-                                            }
+            for (Map.Entry<Constraint, Constraint.Status> leftEntry : branch.constraints().entrySet()) {
+                if (this.left.isInstance(leftEntry.getKey())) {
+                    L left = (L) leftEntry.getKey();
+                    if (this.filterLeft(allContext, branchContext, branch, left, leftEntry.getValue())) {
+                        for (Map.Entry<Constraint, Constraint.Status> rightEntry : branch.constraints().entrySet()) {
+                            if (leftEntry.getValue() != rightEntry.getValue()) {
+                                if (this.right.isInstance(rightEntry.getKey())) {
+                                    R right = (R) rightEntry.getKey();
+                                    if (this.filterRight(allContext, branchContext, branch, right, rightEntry.getValue())) {
+                                        if (this.filter(allContext, branchContext, branch, left, leftEntry.getValue(), right, rightEntry.getValue())) {
+                                            accept(allContext, branchContext, branch, left, leftEntry.getValue(), right, rightEntry.getValue());
+                                            if (!branch.parent().has(branch)) return;
                                         }
                                     }
                                 }

@@ -10,7 +10,6 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -18,7 +17,7 @@ public class ConstraintTree {
     private PropertySet metadata = new PropertySet();
 
     private Set<ConstraintBranch> active = new LinkedHashSet<>();
-    private Map<ConstraintBranch, ConstraintBranch> branches = new TreeMap<>();
+    private Map<ConstraintBranch, ConstraintBranch> branches = new LinkedHashMap<>();
 
     public int numBranches() {
         return this.branches.size();
@@ -53,6 +52,7 @@ public class ConstraintTree {
             return Constraint.Status.UNKNOWN;
         } else {
             Iterator<ConstraintBranch> iter = this.branches.keySet().iterator();
+            ;
             Constraint.Status curr = iter.next().status();
             while (iter.hasNext()) {
                 curr = curr.or(iter.next().status());
@@ -108,34 +108,24 @@ public class ConstraintTree {
     public boolean executeChanges() {
         boolean modified = false;
 
-        Iterator<Map.Entry<ConstraintBranch, ConstraintBranch>> iter = this.branches.entrySet().iterator();
         Map<ConstraintBranch, ConstraintBranch> newBranches = new LinkedHashMap<>();
+        Set<ConstraintBranch> newActive = new LinkedHashSet<>();
 
-        while (iter.hasNext()) {
-            ConstraintBranch branch = iter.next().getKey();
-
+        for (ConstraintBranch branch : this.branches.keySet()) {
             if (branch.diverged()) {
-                iter.remove();
-                this.active.remove(branch);
-
                 branch.divergence().forEach(newBranch -> {
                     newBranch.executeChanges();
-                    addBranch(branch, newBranches);
+                    addBranch(newBranch, newBranches, newActive);
                 });
                 modified = true;
             } else {
                 boolean changed = branch.executeChanges();
-                if (changed) {
-                    iter.remove();
-                    this.active.remove(branch);
-
-                    addBranch(branch, newBranches);
-                }
+                addBranch(branch, newBranches, newActive);
                 modified |= changed;
             }
         }
-
-        newBranches.forEach((k, v) -> addBranch(k, this.branches, this.active));
+        this.branches = newBranches;
+        this.active = newActive;
 
         return modified;
     }
@@ -150,13 +140,6 @@ public class ConstraintTree {
             prev.metadata().inheritFrom(branch.metadata());
         } else if (!branch.trimmed()) {
             active.add(branch);
-        }
-    }
-
-    private static void addBranch(ConstraintBranch branch, Map<ConstraintBranch, ConstraintBranch> branches) {
-        ConstraintBranch prev = branches.putIfAbsent(branch, branch);
-        if (prev != null) {
-            prev.metadata().inheritFrom(branch.metadata());
         }
     }
 

@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -15,42 +14,24 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
 
-public class ConstraintBranch implements Comparable<ConstraintBranch> {
+public class ConstraintBranch {
     private ConstraintTree parent;
 
     private PropertySet metadata = new PropertySet();
     private Map<Constraint, Constraint.Status> constraints = new LinkedHashMap<>();
-    private Map<Class<? extends Constraint>, Set<Constraint>> typedConstraints = new HashMap<>();
-
-    private Map<Constraint, Constraint.Status> constraintView = Collections.unmodifiableMap(constraints);
-    private Map<Class<? extends Constraint>, Set<Constraint>> typedConstraintsView = Collections.unmodifiableMap(typedConstraints);
 
     private List<ConstraintBranch> divergence;
     private List<Predicate<ConstraintBranch>> changes = new ArrayList<>();
 
-    private int priority;
     private boolean trimmed;
 
-    public record Snapshot(PropertySet metadata, Map<Constraint, Constraint.Status> constraints, int priority) {
-        private static final Snapshot empty = new Snapshot(new PropertySet(), Collections.unmodifiableMap(new HashMap<>()), 0);
+    public record Snapshot(PropertySet metadata, Map<Constraint, Constraint.Status> constraints) {
+        private static final Snapshot empty = new Snapshot(new PropertySet(), Collections.unmodifiableMap(new HashMap<>()));
 
         public static Snapshot empty() {
             return empty;
         }
-    }
 
-    @Override
-    public int compareTo(ConstraintBranch o) {
-        return Integer.compare(this.priority, o.priority);
-    }
-
-    public int priority() {
-        return this.priority;
-    }
-
-    public ConstraintBranch setPriority(int priority) {
-        this.priority = priority;
-        return this;
     }
 
     public ConstraintBranch(ConstraintTree parent) {
@@ -79,11 +60,7 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
         ConstraintBranch copy = new ConstraintBranch(parent);
         copy.metadata.copyFrom(this.metadata);
         copy.constraints.putAll(this.constraints);
-        this.typedConstraints.forEach((k, v) -> copy.typedConstraints.put(k, new HashSet<>(v)));
         copy.changes.addAll(this.changes);
-
-        copy.priority = this.priority;
-        copy.trimmed = this.trimmed;
         return copy;
     }
 
@@ -93,7 +70,7 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
 
         PropertySet snapMeta = new PropertySet().copyFrom(copy.metadata());
         Map<Constraint, Constraint.Status> snapConstraints = new LinkedHashMap<>(copy.constraints());
-        return new Snapshot(snapMeta, snapConstraints, this.priority);
+        return new Snapshot(snapMeta, snapConstraints);
     }
 
     public boolean diverged() {
@@ -109,11 +86,7 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
     }
 
     public Map<Constraint, Constraint.Status> constraints() {
-        return this.constraintView;
-    }
-
-    public Map<Class<? extends Constraint>, Set<Constraint>> typedConstraints() {
-        return this.typedConstraintsView;
+        return Collections.unmodifiableMap(new HashMap<>(this.constraints));
     }
 
     public int size() {
@@ -122,10 +95,6 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
 
     public PropertySet metadata() {
         return this.metadata;
-    }
-
-    public Constraint.Status status(Constraint constraint) {
-        return this.constraints.getOrDefault(constraint, Constraint.Status.UNKNOWN);
     }
 
     public Constraint.Status status() {
@@ -150,11 +119,7 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
     }
 
     public void diverge(List<? extends Map<? extends Constraint, Constraint.Status>> constraints) {
-        List<Snapshot> divergence = new ArrayList<>();
-        for (int i = 0; i < constraints.size(); i++) {
-            Snapshot snapshot = new Snapshot(new PropertySet(), (Map<Constraint, Constraint.Status>) constraints.get(i), i);
-        }
-        this.divergeBranches(divergence);
+        this.divergeBranches(constraints.stream().map(mp -> new Snapshot(new PropertySet(), (Map) mp)).toList());
     }
 
     public List<ConstraintBranch> divergence() {
@@ -209,7 +174,6 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
         this.change(branch -> {
             Constraint.Status current = branch.constraints.get(constraint);
             branch.constraints.put(constraint, status);
-            branch.typedConstraints.computeIfAbsent(constraint.getClass(), k -> new HashSet<>()).add(constraint);
             if (status == Constraint.Status.FALSE) branch.trimmed = true;
             return current == null || current != status;
         });
@@ -219,7 +183,6 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
     public ConstraintBranch add(Constraint constraint, Constraint.Status status) {
         this.change(branch -> {
             Object prev = branch.constraints.putIfAbsent(constraint, status);
-            branch.typedConstraints.computeIfAbsent(constraint.getClass(), k -> new HashSet<>()).add(constraint);
             if (prev == null && status == Constraint.Status.FALSE) branch.trimmed = true;
             return prev == null;
         });
@@ -229,15 +192,6 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
     public ConstraintBranch drop(Constraint constraint) {
         this.change(branch -> {
             Constraint.Status prev = branch.constraints.remove(constraint);
-
-            Set<Constraint> typedConstrains = this.typedConstraints.get(constraint.getClass());
-            if (typedConstrains != null) {
-                typedConstrains.remove(constraint);
-                if (typedConstrains.isEmpty()) {
-                    this.typedConstraints.remove(constraint.getClass());
-                }
-            }
-
             if (prev == Constraint.Status.FALSE) branch.trimmed = branch.status() == Constraint.Status.FALSE;
             return prev != null;
         });
