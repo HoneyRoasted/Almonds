@@ -183,12 +183,11 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
                 if (this.divergence == null) this.divergence = new ArrayList<>();
 
                 if (this.divergence.isEmpty()) {
-                    branches.forEach(snapshot -> {
+                    branches.forEach(branch -> {
                         ConstraintBranch newBranch = this.copy(this.parent);
-                        newBranch.metadata().inheritFrom(snapshot.metadata());
-                        newBranch.priority = this.priority + snapshot.priority;
+                        newBranch.metadata().inheritFrom(branch.metadata());
 
-                        snapshot.constraints().forEach(newBranch::add);
+                        branch.constraints().forEach(newBranch::add);
                         newBranch.executeChanges();
                         this.divergence.add(newBranch);
                     });
