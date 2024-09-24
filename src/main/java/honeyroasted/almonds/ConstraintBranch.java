@@ -18,7 +18,9 @@ public class ConstraintBranch {
     private ConstraintTree parent;
 
     private PropertySet metadata = new PropertySet();
+
     private Map<Constraint, Constraint.Status> constraints = new LinkedHashMap<>();
+    private Map<Constraint, Constraint.Status> constraintsView = Collections.unmodifiableMap(constraints);
 
     private List<ConstraintBranch> divergence;
     private List<Predicate<ConstraintBranch>> changes = new ArrayList<>();
@@ -86,7 +88,7 @@ public class ConstraintBranch {
     }
 
     public Map<Constraint, Constraint.Status> constraints() {
-        return Collections.unmodifiableMap(new HashMap<>(this.constraints));
+        return this.constraintsView;
     }
 
     public int size() {
