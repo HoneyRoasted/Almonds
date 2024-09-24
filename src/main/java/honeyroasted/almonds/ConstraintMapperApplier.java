@@ -3,12 +3,20 @@ package honeyroasted.almonds;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 public class ConstraintMapperApplier implements ConstraintMapper {
     private List<ConstraintMapper> mappers;
+    private boolean exploreTrimmedPaths;
+
+    public ConstraintMapperApplier(List<ConstraintMapper> mappers, boolean exploreTrimmedPaths) {
+        this.mappers = Collections.unmodifiableList(mappers);
+        this.exploreTrimmedPaths = exploreTrimmedPaths;
+    }
 
     public ConstraintMapperApplier(List<ConstraintMapper> mappers) {
-        this.mappers = Collections.unmodifiableList(mappers);
+        this(mappers, false);
     }
 
     public List<ConstraintMapper> mappers() {
@@ -31,24 +39,28 @@ public class ConstraintMapperApplier implements ConstraintMapper {
     public void accept(ConstraintBranch branch) {
         ConstraintTree tree = branch.parent();
 
-        List<ConstraintBranch> branches = new ArrayList<>();
-        branches.add(branch);
+        Map<ConstraintBranch, ConstraintBranch> branches = new TreeMap<>();
+        branches.put(branch, branch);
 
         do {
-            for (ConstraintBranch sub : branches) {
+            if (!exploreTrimmedPaths && branches.keySet().stream().anyMatch(cb -> cb.status() == Constraint.Status.TRUE)) {
+                return;
+            }
+
+            for (ConstraintBranch sub : branches.keySet()) {
                 for (ConstraintMapper mapper : this.mappers) {
                     mapper.accept(sub);
                 }
             }
 
-            List<ConstraintBranch> newTracked = new ArrayList<>();
-            for (ConstraintBranch sub : branches) {
+            Map<ConstraintBranch, ConstraintBranch> newTracked = new TreeMap<>();
+            for (ConstraintBranch sub : branches.keySet()) {
                 if (sub.diverged()) {
                     sub.divergence().forEach(cb -> {
-                        if (!cb.trimmed()) newTracked.add(cb);
+                        if (!cb.trimmed() || this.exploreTrimmedPaths) newTracked.put(cb, cb);
                     });
-                } else if (!sub.trimmed()) {
-                    newTracked.add(sub);
+                } else if (!sub.trimmed() || this.exploreTrimmedPaths) {
+                    newTracked.put(sub, sub);
                 }
             }
             branches = newTracked;
@@ -58,6 +70,10 @@ public class ConstraintMapperApplier implements ConstraintMapper {
 
     public void accept(ConstraintTree tree) {
         do {
+            if (!exploreTrimmedPaths && tree.branches().stream().anyMatch(cb -> cb.status() == Constraint.Status.TRUE)) {
+                return;
+            }
+
             for (ConstraintBranch branch : tree.active()) {
                 for (ConstraintMapper mapper : this.mappers) {
                     mapper.accept(branch);
