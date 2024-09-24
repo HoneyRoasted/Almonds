@@ -43,7 +43,7 @@ public class ConstraintMapperApplier implements ConstraintMapper {
         branches.put(branch, branch);
 
         do {
-            if (!exploreTrimmedPaths && branches.keySet().stream().anyMatch(cb -> cb.status() == Constraint.Status.TRUE)) {
+            if (!exploreTrimmedPaths && branches.keySet().stream().anyMatch(ConstraintBranch::trimmedTrue)) {
                 return;
             }
 
@@ -57,9 +57,9 @@ public class ConstraintMapperApplier implements ConstraintMapper {
             for (ConstraintBranch sub : branches.keySet()) {
                 if (sub.diverged()) {
                     sub.divergence().forEach(cb -> {
-                        if (!cb.trimmed() || this.exploreTrimmedPaths) newTracked.put(cb, cb);
+                        if (!cb.trimmedFalse() || this.exploreTrimmedPaths) newTracked.put(cb, cb);
                     });
-                } else if (!sub.trimmed() || this.exploreTrimmedPaths) {
+                } else if (!sub.trimmedFalse() || this.exploreTrimmedPaths) {
                     newTracked.put(sub, sub);
                 }
             }
@@ -70,7 +70,7 @@ public class ConstraintMapperApplier implements ConstraintMapper {
 
     public void accept(ConstraintTree tree) {
         do {
-            if (!exploreTrimmedPaths && tree.branches().stream().anyMatch(cb -> cb.status() == Constraint.Status.TRUE)) {
+            if (!exploreTrimmedPaths && tree.branches().stream().anyMatch(ConstraintBranch::trimmedTrue)) {
                 return;
             }
 
