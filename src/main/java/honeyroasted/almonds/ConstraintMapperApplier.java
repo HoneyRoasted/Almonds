@@ -4,9 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 public class ConstraintMapperApplier implements ConstraintMapper {
     private List<ConstraintMapper> mappers;
@@ -41,28 +39,28 @@ public class ConstraintMapperApplier implements ConstraintMapper {
     public void accept(ConstraintBranch branch) {
         ConstraintTree tree = branch.parent();
 
-        Set<ConstraintBranch> branches = new TreeSet<>();
-        branches.add(branch);
+        Map<ConstraintBranch, ConstraintBranch> branches = new TreeMap<>();
+        branches.put(branch, branch);
 
         do {
-            if (!exploreTrimmedPaths && branches.stream().anyMatch(ConstraintBranch::trimmedTrue)) {
+            if (!exploreTrimmedPaths && branches.keySet().stream().anyMatch(ConstraintBranch::trimmedTrue)) {
                 return;
             }
 
-            for (ConstraintBranch sub : branches) {
+            for (ConstraintBranch sub : branches.keySet()) {
                 for (ConstraintMapper mapper : this.mappers) {
                     mapper.accept(sub);
                 }
             }
 
-            Set<ConstraintBranch> newTracked = new TreeSet<>();
-            for (ConstraintBranch sub : branches) {
+            Map<ConstraintBranch, ConstraintBranch> newTracked = new TreeMap<>();
+            for (ConstraintBranch sub : branches.keySet()) {
                 if (sub.diverged()) {
                     sub.divergence().forEach(cb -> {
-                        if (!cb.trimmedFalse() || this.exploreTrimmedPaths) newTracked.add(cb);
+                        if (!cb.trimmedFalse() || this.exploreTrimmedPaths) newTracked.put(cb, cb);
                     });
                 } else if (!sub.trimmedFalse() || this.exploreTrimmedPaths) {
-                    newTracked.add(sub);
+                    newTracked.put(sub, sub);
                 }
             }
             branches = newTracked;
@@ -72,7 +70,7 @@ public class ConstraintMapperApplier implements ConstraintMapper {
 
     public void accept(ConstraintTree tree) {
         do {
-            if (!this.exploreTrimmedPaths && tree.branches().stream().anyMatch(ConstraintBranch::trimmedTrue)) {
+            if (!exploreTrimmedPaths && tree.branches().stream().anyMatch(ConstraintBranch::trimmedTrue)) {
                 return;
             }
 

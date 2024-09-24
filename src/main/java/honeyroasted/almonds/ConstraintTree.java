@@ -6,18 +6,19 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeSet;
+import java.util.TreeMap;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class ConstraintTree {
     private PropertySet metadata = new PropertySet();
 
-    private Set<ConstraintBranch> active = new TreeSet<>();
-    private Map<ConstraintBranch, ConstraintBranch> branches = new LinkedHashMap<>();
+    private Set<ConstraintBranch> active = new LinkedHashSet<>();
+    private Map<ConstraintBranch, ConstraintBranch> branches = new TreeMap<>();
 
     public int numBranches() {
         return this.branches.size();
