@@ -261,11 +261,11 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
         this.change(branch -> {
             Constraint.Status prev = branch.constraints.remove(constraint);
 
-            Set<Constraint> typedConstrains = branch.typedConstraints.get(constraint.getClass());
+            Set<Constraint> typedConstrains = this.typedConstraints.get(constraint.getClass());
             if (typedConstrains != null) {
                 typedConstrains.remove(constraint);
                 if (typedConstrains.isEmpty()) {
-                    branch.typedConstraints.remove(constraint.getClass());
+                    this.typedConstraints.remove(constraint.getClass());
                 }
             }
 
