@@ -198,7 +198,6 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
                             ConstraintBranch newBranch = this.copy(this.parent);
                             newBranch.metadata().inheritFrom(diverge.metadata)
                                     .inheritFrom(snapshot.metadata);
-                            newBranch.priority = this.priority + diverge.priority + snapshot.priority;
 
                             diverge.constraints().forEach(newBranch::add);
                             snapshot.constraints().forEach(newBranch::add);
