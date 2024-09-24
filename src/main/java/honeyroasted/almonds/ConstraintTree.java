@@ -148,7 +148,7 @@ public class ConstraintTree {
         ConstraintBranch prev = branches.putIfAbsent(branch, branch);
         if (prev != null) {
             prev.metadata().inheritFrom(branch.metadata());
-        } else if (!branch.trimmedFalse()) {
+        } else if (!branch.trimmed()) {
             active.add(branch);
         }
     }

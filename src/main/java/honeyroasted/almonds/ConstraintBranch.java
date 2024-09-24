@@ -29,14 +29,7 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
     private List<Predicate<ConstraintBranch>> changes = new ArrayList<>();
 
     private int priority;
-
-    public boolean trimmedFalse() {
-        return this.status() == Constraint.Status.FALSE && !this.constraints.isEmpty();
-    }
-
-    public boolean trimmedTrue() {
-        return this.status() == Constraint.Status.TRUE && !this.constraints.isEmpty();
-    }
+    private boolean trimmed;
 
     public record Snapshot(PropertySet metadata, Map<Constraint, Constraint.Status> constraints, int priority) {
         private static final Snapshot empty = new Snapshot(new PropertySet(), Collections.unmodifiableMap(new HashMap<>()), 0);
@@ -90,6 +83,7 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
         copy.changes.addAll(this.changes);
 
         copy.priority = this.priority;
+        copy.trimmed = this.trimmed;
         return copy;
     }
 
@@ -108,6 +102,10 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
 
     public ConstraintTree parent() {
         return this.parent;
+    }
+
+    public boolean trimmed() {
+        return this.trimmed;
     }
 
     public Map<Constraint, Constraint.Status> constraints() {
@@ -130,23 +128,16 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
         return this.constraints.getOrDefault(constraint, Constraint.Status.UNKNOWN);
     }
 
-    private Constraint.Status cached;
-
     public Constraint.Status status() {
-        if (this.cached == null) calculateStatus();
-        return this.cached;
-    }
-
-    private void calculateStatus() {
         if (this.constraints.isEmpty()) {
-            this.cached = Constraint.Status.TRUE;
+            return Constraint.Status.UNKNOWN;
         } else {
             Iterator<Constraint.Status> iter = this.constraints.values().iterator();
             Constraint.Status curr = iter.next();
             while (iter.hasNext()) {
                 curr = curr.and(iter.next());
             }
-            this.cached = curr;
+            return curr;
         }
     }
 
@@ -219,17 +210,8 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
             Constraint.Status current = branch.constraints.get(constraint);
             branch.constraints.put(constraint, status);
             branch.typedConstraints.computeIfAbsent(constraint.getClass(), k -> new HashSet<>()).add(constraint);
-
-            boolean modified = current == null || current != status;
-            if (current != null && current != status) {
-                if (current.isTrue()) {
-                    //If the previous status was true, that invalidates the status
-                    this.cached = null;
-                } else {
-                    this.cached = this.status().and(status);
-                }
-            }
-            return modified;
+            if (status == Constraint.Status.FALSE) branch.trimmed = true;
+            return current == null || current != status;
         });
         return this;
     }
@@ -238,13 +220,8 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
         this.change(branch -> {
             Object prev = branch.constraints.putIfAbsent(constraint, status);
             branch.typedConstraints.computeIfAbsent(constraint.getClass(), k -> new HashSet<>()).add(constraint);
-
-            if (prev == null) {
-                this.cached = this.status().and(status);
-                return true;
-            } else {
-                return false;
-            }
+            if (prev == null && status == Constraint.Status.FALSE) branch.trimmed = true;
+            return prev == null;
         });
         return this;
     }
@@ -261,12 +238,8 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
                 }
             }
 
-            if (prev != null) {
-                this.cached = null;
-                return true;
-            } else {
-                return false;
-            }
+            if (prev == Constraint.Status.FALSE) branch.trimmed = branch.status() == Constraint.Status.FALSE;
+            return prev != null;
         });
         return this;
     }
@@ -276,8 +249,7 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
         this.change(branch -> {
             Constraint.Status curr = branch.constraints.get(constraint);
             if (curr == null || curr != status) {
-
-
+                if (status == Constraint.Status.FALSE) branch.trimmed = true;
                 branch.constraints.put(constraint, status);
                 return true;
             }
