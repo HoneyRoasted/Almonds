@@ -119,7 +119,7 @@ public class ConstraintTree {
 
                 branch.divergence().forEach(newBranch -> {
                     newBranch.executeChanges();
-                    addBranch(branch, newBranches);
+                    addBranch(newBranch, newBranches);
                 });
                 modified = true;
             } else {
