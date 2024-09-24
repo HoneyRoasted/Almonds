@@ -82,6 +82,10 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
         }
     }
 
+    public ConstraintBranch copy() {
+        return this.copy(null);
+    }
+
     public ConstraintBranch copy(ConstraintTree parent) {
         ConstraintBranch copy = new ConstraintBranch(parent);
         copy.metadata.copyFrom(this.metadata);
@@ -170,7 +174,6 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
         return this.divergence == null ? Collections.emptyList() : divergence;
     }
 
-
     public void divergeBranches(List<Snapshot> branches) {
         if (!branches.isEmpty()) {
             if (!this.diverged() && branches.size() == 1) {
@@ -184,19 +187,21 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
 
                 if (this.divergence.isEmpty()) {
                     branches.forEach(snapshot -> {
-                        ConstraintBranch newBranch = this.copy(this.parent);
+                        ConstraintBranch newBranch = this.copy();
                         newBranch.metadata().inheritFrom(snapshot.metadata());
                         newBranch.priority = this.priority + snapshot.priority;
 
                         snapshot.constraints().forEach(newBranch::add);
                         newBranch.executeChanges();
+                        newBranch.parent = this.parent;
+
                         this.divergence.add(newBranch);
                     });
                 } else {
                     List<ConstraintBranch> newDiverge = new ArrayList<>();
                     for (Snapshot snapshot : branches) {
                         for (ConstraintBranch diverge : this.divergence) {
-                            ConstraintBranch newBranch = this.copy(this.parent);
+                            ConstraintBranch newBranch = this.copy();
                             newBranch.metadata().inheritFrom(diverge.metadata)
                                     .inheritFrom(snapshot.metadata);
                             newBranch.priority = this.priority + diverge.priority + snapshot.priority;
@@ -205,6 +210,7 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
                             snapshot.constraints().forEach(newBranch::add);
                             newBranch.executeChanges();
 
+                            newBranch.parent = this.parent;
                             newDiverge.add(newBranch);
                         }
                     }
