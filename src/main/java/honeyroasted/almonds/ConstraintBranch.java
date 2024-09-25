@@ -215,11 +215,11 @@ public class ConstraintBranch {
         this.change(branch -> {
             Constraint.Status prev = branch.constraints.remove(constraint);
 
-            Set<Constraint> consTyped = this.typedConstraints.get(constraint.getClass());
+            Set<Constraint> consTyped = branch.typedConstraints.get(constraint.getClass());
             if (consTyped != null) {
                 consTyped.remove(constraint);
                 if (consTyped.isEmpty()) {
-                    this.typedConstraints.remove(constraint.getClass());
+                    branch.typedConstraints.remove(constraint.getClass());
                 }
             }
 
