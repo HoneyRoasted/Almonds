@@ -32,7 +32,7 @@ public class ConstraintBranch {
     private boolean trimmed;
 
     public record Snapshot(PropertySet metadata, Map<Constraint, Constraint.Status> constraints) {
-        private static final Snapshot empty = new Snapshot(new PropertySet(), Collections.unmodifiableMap(new HashMap<>()));
+        private static final Snapshot empty = new Snapshot(new PropertySet(), Collections.emptyMap());
 
         public static Snapshot empty() {
             return empty;
