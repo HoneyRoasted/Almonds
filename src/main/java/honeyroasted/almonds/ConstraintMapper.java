@@ -78,7 +78,7 @@ public interface ConstraintMapper extends Consumer<ConstraintBranch> {
             PropertySet branchContext = branch.metadata();
 
             if (this.strict) {
-                for (Constraint constraint : branch.typeConstraints().get(this.type)) {
+                for (Constraint constraint : branch.constraintsByType(this.type)) {
                     T con = (T) constraint;
                     Constraint.Status status = branch.status(constraint);
                     if (this.filter(allContext, branchContext, branch, con, status)) {
@@ -142,11 +142,11 @@ public interface ConstraintMapper extends Consumer<ConstraintBranch> {
             PropertySet branchContext = branch.metadata();
 
             if (this.strict) {
-                for (Constraint leftCons : branch.typeConstraints().get(this.left)) {
+                for (Constraint leftCons : branch.constraintsByType(this.left)) {
                     L left = (L) leftCons;
                     Constraint.Status leftStat = branch.status(leftCons);
                     if (this.filterLeft(allContext, branchContext, branch, left, leftStat)) {
-                        for (Constraint rightCons : branch.typeConstraints().get(this.right)) {
+                        for (Constraint rightCons : branch.constraintsByType(this.right)) {
                             R right = (R) rightCons;
                             Constraint.Status rightStat = branch.status(rightCons);
                             if (this.filterRight(allContext, branchContext, branch, right, rightStat)) {

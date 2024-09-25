@@ -101,6 +101,10 @@ public class ConstraintBranch {
         return this.typedConstraintsView;
     }
 
+    public Set<Constraint> constraintsByType(Class<?> cls) {
+        return this.typedConstraints.getOrDefault(cls, Collections.emptySet());
+    }
+
     public int size() {
         return this.constraints.size();
     }
