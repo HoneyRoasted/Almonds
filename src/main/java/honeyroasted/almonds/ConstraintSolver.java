@@ -7,10 +7,10 @@ import java.util.Collections;
 import java.util.List;
 
 public class ConstraintSolver {
-    private List<ExhaustiveConstraintMapperApplier> appliers;
+    private List<ConstraintMapperApplier> appliers;
     private PropertySet context = new PropertySet();
 
-    public ConstraintSolver(List<ExhaustiveConstraintMapperApplier> appliers) {
+    public ConstraintSolver(List<ConstraintMapperApplier> appliers) {
         this.appliers = appliers;
     }
 
@@ -39,7 +39,7 @@ public class ConstraintSolver {
         this.constraints.forEach(branch::add);
         tree.addBranch(branch);
 
-        for (ExhaustiveConstraintMapperApplier applier : this.appliers) {
+        for (ConstraintMapperApplier applier : this.appliers) {
             applier.accept(tree);
         }
 
