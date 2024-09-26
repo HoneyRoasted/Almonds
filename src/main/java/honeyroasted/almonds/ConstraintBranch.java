@@ -31,7 +31,7 @@ public class ConstraintBranch {
     private List<ConstraintBranch> divergence;
     private List<ConstraintBranch> newDivergence;
 
-    private List<Predicate<ConstraintBranch>> changes = new LinkedList<>();
+    private List<Predicate<ConstraintBranch>> changes = new ArrayList<>();
 
     private boolean trimmed;
 
