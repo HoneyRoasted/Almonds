@@ -62,7 +62,6 @@ public class UntrimmedConstraintMapperApplier implements ConstraintMapperApplier
             List<ConstraintBranch> temp = branches;
             branches = newTracked;
             newTracked = temp;
-
         } while (tree.executeChanges());
     }
 
