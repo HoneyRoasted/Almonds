@@ -34,7 +34,7 @@ public class ConstraintTree {
     public Set<ConstraintBranch> invalidBranches() {
         return this.branches(cn -> cn.status() == Constraint.Status.FALSE);
     }
-    
+
     public Set<ConstraintBranch> branches(Predicate<ConstraintBranch> filter) {
         return this.branches.keySet().stream().filter(filter).collect(Collectors.toUnmodifiableSet());
     }
@@ -75,7 +75,7 @@ public class ConstraintTree {
         sb.append("Total Branches: ").append(this.branches().size()).append("\n");
         if (!this.metadata().all(Object.class).isEmpty()) {
             sb.append("Metadata:\n");
-            this.metadata().all(Object.class).forEach(obj -> sb.append(obj).append("\n"));
+            this.metadata().all(Object.class).forEach(obj -> sb.append("  ").append(obj).append("\n"));
             sb.append("\n");
         }
 
