@@ -10,8 +10,7 @@ public class SortedList<T> extends ArrayList<T> {
     private static final long serialVersionUID = 1L;
     private Comparator<? super T> comparator = null;
 
-    public SortedList() {
-    }
+    public SortedList() {}
 
     public SortedList(Comparator<? super T> comparator) {
         this.comparator = comparator;

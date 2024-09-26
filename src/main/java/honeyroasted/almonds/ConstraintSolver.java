@@ -7,25 +7,14 @@ import java.util.Collections;
 import java.util.List;
 
 public class ConstraintSolver {
-    private List<ConstraintMapperApplier> appliers;
+    private List<ExhaustiveConstraintMapperApplier> appliers;
     private PropertySet context = new PropertySet();
-    private int capacityFactor = 2;
 
-    public ConstraintSolver(List<ConstraintMapperApplier> appliers) {
+    public ConstraintSolver(List<ExhaustiveConstraintMapperApplier> appliers) {
         this.appliers = appliers;
     }
 
     private List<Constraint> constraints = new ArrayList<>();
-
-    public ConstraintSolver setInitialCapacity(int size) {
-        this.capacityFactor = -size;
-        return this;
-    }
-
-    public ConstraintSolver setCapacityFactor(int factor) {
-        this.capacityFactor = factor;
-        return this;
-    }
 
     public ConstraintSolver bind(Constraint... constraints) {
         Collections.addAll(this.constraints, constraints);
@@ -50,7 +39,7 @@ public class ConstraintSolver {
         this.constraints.forEach(branch::add);
         tree.addBranch(branch);
 
-        for (ConstraintMapperApplier applier : this.appliers) {
+        for (ExhaustiveConstraintMapperApplier applier : this.appliers) {
             applier.accept(tree);
         }
 
