@@ -15,7 +15,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
 
-public class ConstraintBranch {
+public class ConstraintBranch implements Comparable<ConstraintBranch> {
     private ConstraintTree parent;
 
     private PropertySet metadata = new PropertySet();
@@ -30,9 +30,15 @@ public class ConstraintBranch {
     private List<Predicate<ConstraintBranch>> changes = new ArrayList<>();
 
     private boolean trimmed;
+    private int priority;
 
-    public record Snapshot(PropertySet metadata, Map<Constraint, Constraint.Status> constraints) {
-        private static final Snapshot empty = new Snapshot(new PropertySet(), Collections.emptyMap());
+    @Override
+    public int compareTo(ConstraintBranch o) {
+        return Integer.compare(this.priority, o.priority);
+    }
+
+    public record Snapshot(PropertySet metadata, Map<Constraint, Constraint.Status> constraints, int priority) {
+        private static final Snapshot empty = new Snapshot(new PropertySet(), Collections.emptyMap(), 0);
 
         public static Snapshot empty() {
             return empty;
@@ -72,13 +78,14 @@ public class ConstraintBranch {
         this.typedConstraints.forEach((t, cons) -> copy.typedConstraints.put(t, new HashSet<>(cons)));
         copy.changes.addAll(this.changes);
         copy.trimmed = this.trimmed;
+        copy.priority = this.priority;
         return copy;
     }
 
     public Snapshot snapshot() {
         ConstraintBranch copy = this.copy();
         copy.executeChanges();
-        return new Snapshot(copy.metadata, copy.constraints);
+        return new Snapshot(copy.metadata, copy.constraints, copy.priority);
     }
 
     public boolean diverged() {
@@ -91,6 +98,14 @@ public class ConstraintBranch {
 
     public boolean trimmed() {
         return this.trimmed;
+    }
+
+    public int priority() {
+        return this.priority;
+    }
+
+    public void setPriority(int priority) {
+        this.priority = priority;
     }
 
     public Map<Constraint, Constraint.Status> constraints() {
@@ -138,8 +153,13 @@ public class ConstraintBranch {
         this.diverge(constraints.stream().map(cn -> Map.of(cn, Constraint.Status.UNKNOWN)).toList());
     }
 
+    private static PropertySet emptyProperties = new PropertySet();
     public void diverge(List<? extends Map<? extends Constraint, Constraint.Status>> constraints) {
-        this.divergeBranches(constraints.stream().map(mp -> new Snapshot(new PropertySet(), (Map) mp)).toList());
+        List<Snapshot> branches = new ArrayList<>();
+        for (int i = 0; i < constraints.size(); i++) {
+            branches.add(new Snapshot(emptyProperties, (Map<Constraint, Constraint.Status>) constraints.get(i), i));
+        }
+        this.divergeBranches(branches);
     }
 
     public List<ConstraintBranch> divergence() {
@@ -159,25 +179,29 @@ public class ConstraintBranch {
                 if (this.divergence == null) this.divergence = new ArrayList<>();
 
                 if (this.divergence.isEmpty()) {
-                    branches.forEach(branch -> {
-                        ConstraintBranch newBranch = this.copy(this.parent);
-                        newBranch.metadata().inheritFrom(branch.metadata());
+                    branches.forEach(snapshot -> {
+                        ConstraintBranch newBranch = this.copy();
+                        newBranch.metadata().inheritFrom(snapshot.metadata());
+                        newBranch.setPriority(snapshot.priority());
 
-                        branch.constraints().forEach(newBranch::add);
+                        snapshot.constraints().forEach(newBranch::add);
                         newBranch.executeChanges();
+                        newBranch.parent = this.parent;
                         this.divergence.add(newBranch);
                     });
                 } else {
                     List<ConstraintBranch> newDiverge = new ArrayList<>();
                     for (Snapshot snapshot : branches) {
                         for (ConstraintBranch diverge : this.divergence) {
-                            ConstraintBranch newBranch = this.copy(this.parent);
+                            ConstraintBranch newBranch = this.copy();
                             newBranch.metadata().inheritFrom(diverge.metadata)
                                     .inheritFrom(snapshot.metadata);
+                            newBranch.setPriority(diverge.priority() + snapshot.priority());
 
                             diverge.constraints().forEach(newBranch::add);
                             snapshot.constraints().forEach(newBranch::add);
                             newBranch.executeChanges();
+                            newBranch.parent = this.parent;
 
                             newDiverge.add(newBranch);
                         }
@@ -257,6 +281,7 @@ public class ConstraintBranch {
             sb.append("\n");
         }
 
+        sb.append(indent).append("Priority: ").append(this.priority).append("\n");
         sb.append(indent).append("Constraints:\n");
         this.constraints.forEach((con, stat) -> sb.append(indent).append(stat).append(": ").append(simpleName ? con.simpleName() : con).append("\n"));
 

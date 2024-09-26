@@ -1,5 +1,6 @@
 package honeyroasted.almonds;
 
+import com.sun.source.util.Trees;
 import honeyroasted.collect.property.PropertySet;
 
 import java.util.Collections;
@@ -10,14 +11,16 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class ConstraintTree {
     private PropertySet metadata = new PropertySet();
 
-    private Set<ConstraintBranch> active = new LinkedHashSet<>();
-    private Map<ConstraintBranch, ConstraintBranch> branches = new LinkedHashMap<>();
+    private Set<ConstraintBranch> active = new TreeSet<>();
+    private Map<ConstraintBranch, ConstraintBranch> branches = new TreeMap<>();
 
     public int numBranches() {
         return this.branches.size();
@@ -108,17 +111,24 @@ public class ConstraintTree {
     public boolean executeChanges() {
         boolean modified = false;
 
-        Map<ConstraintBranch, ConstraintBranch> newBranches = new LinkedHashMap<>();
-        Set<ConstraintBranch> newActive = new LinkedHashSet<>();
+        Map<ConstraintBranch, ConstraintBranch> newBranches = new TreeMap<>();
+        Set<ConstraintBranch> newActive = new TreeSet<>();
 
+        int currPrio = 0;
         for (ConstraintBranch branch : this.branches.keySet()) {
             if (branch.diverged()) {
-                branch.divergence().forEach(newBranch -> {
+                for (ConstraintBranch newBranch : branch.divergence()) {
+                    currPrio += newBranch.priority();
+                    newBranch.setPriority(currPrio);
+
                     newBranch.executeChanges();
                     addBranch(newBranch, newBranches, newActive);
-                });
+                }
                 modified = true;
             } else {
+                currPrio += branch.priority();
+                branch.setPriority(currPrio);
+
                 boolean changed = branch.executeChanges();
                 addBranch(branch, newBranches, newActive);
                 modified |= changed;
