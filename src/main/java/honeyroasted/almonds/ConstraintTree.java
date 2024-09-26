@@ -145,13 +145,15 @@ public class ConstraintTree {
 
         for (int i = 0; i < inOrder.size(); i++) {
             ConstraintBranch branch = inOrder.get(i);
+            int prioTemp = branch.priority();
+
             if (prev == branch.priority()) {
                 branch.setPriority(curr);
             } else {
                 branch.setPriority(curr++);
             }
 
-            prev = branch.priority();
+            prev = prioTemp;
         }
 
         this.branches = newBranches;
