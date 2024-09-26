@@ -116,17 +116,11 @@ public class ConstraintTree {
         for (ConstraintBranch branch : this.branches.keySet()) {
             if (branch.diverged()) {
                 for (ConstraintBranch newBranch : branch.divergence()) {
-                    currPrio += newBranch.priority();
-                    newBranch.setPriority(currPrio);
-
                     newBranch.executeChanges();
                     addBranch(newBranch, newBranches, newActive, all);
                 }
                 modified = true;
             } else {
-                currPrio += branch.priority();
-                branch.setPriority(currPrio);
-
                 boolean changed = branch.executeChanges();
                 addBranch(branch, newBranches, newActive, all);
                 modified |= changed;
