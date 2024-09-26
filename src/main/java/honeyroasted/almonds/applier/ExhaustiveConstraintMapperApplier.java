@@ -60,7 +60,6 @@ public class ExhaustiveConstraintMapperApplier implements ConstraintMapperApplie
             List<ConstraintBranch> temp = branches;
             branches = newTracked;
             newTracked = temp;
-
         } while (tree.executeChanges());
     }
 

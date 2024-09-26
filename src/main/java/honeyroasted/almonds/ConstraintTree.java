@@ -125,6 +125,7 @@ public class ConstraintTree {
 
             if (branch.diverged()) {
                 iter.remove();
+                this.active.remove(branch);
                 for (ConstraintBranch newBranch : branch.divergence()) {
                     newBranch.executeChanges();
                     addBranch(newBranch, newBranches);
@@ -134,6 +135,7 @@ public class ConstraintTree {
                 boolean changed = branch.executeChanges();
                 if (changed) {
                     iter.remove();
+                    this.active.remove(branch);
                     addBranch(branch, newBranches);
                 }
                 modified |= changed;
