@@ -2,11 +2,14 @@ package honeyroasted.almonds;
 
 import honeyroasted.collect.property.PropertySet;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -111,6 +114,8 @@ public class ConstraintTree {
         Map<ConstraintBranch, ConstraintBranch> newBranches = new LinkedHashMap<>();
         Set<ConstraintBranch> newActive = new LinkedHashSet<>();
 
+        List<ConstraintBranch> inOrder = new ArrayList<>();
+
         int currPrio = 0;
         for (ConstraintBranch branch : this.branches.keySet()) {
             if (branch.diverged()) {
@@ -120,6 +125,7 @@ public class ConstraintTree {
 
                     newBranch.executeChanges();
                     addBranch(newBranch, newBranches, newActive);
+                    inOrder.add(newBranch);
                 }
                 modified = true;
             } else {
@@ -128,9 +134,26 @@ public class ConstraintTree {
 
                 boolean changed = branch.executeChanges();
                 addBranch(branch, newBranches, newActive);
+                inOrder.add(branch);
                 modified |= changed;
             }
         }
+
+        inOrder.sort(Comparator.naturalOrder());
+        int curr = 0;
+        int prev = 0;
+
+        for (int i = 0; i < inOrder.size(); i++) {
+            ConstraintBranch branch = inOrder.get(i);
+            if (prev == branch.priority()) {
+                branch.setPriority(curr);
+            } else {
+                branch.setPriority(curr++);
+            }
+
+            prev = branch.priority();
+        }
+
         this.branches = newBranches;
         this.active = newActive;
 
