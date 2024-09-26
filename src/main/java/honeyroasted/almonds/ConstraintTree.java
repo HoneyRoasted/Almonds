@@ -1,13 +1,12 @@
 package honeyroasted.almonds;
 
-import honeyroasted.almonds.util.SortedList;
 import honeyroasted.collect.property.PropertySet;
 
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -17,7 +16,7 @@ import java.util.stream.Collectors;
 public class ConstraintTree {
     private PropertySet metadata = new PropertySet();
 
-    private List<ConstraintBranch> active = new SortedList<>();
+    private Set<ConstraintBranch> active = new LinkedHashSet<>();
     private Map<ConstraintBranch, ConstraintBranch> branches = new LinkedHashMap<>();
 
     public int numBranches() {
@@ -36,7 +35,7 @@ public class ConstraintTree {
         return this.branches.keySet().stream().filter(filter).collect(Collectors.toUnmodifiableSet());
     }
 
-    public List<ConstraintBranch> active() {
+    public Set<ConstraintBranch> active() {
         return this.active;
     }
 
@@ -110,8 +109,8 @@ public class ConstraintTree {
         boolean modified = false;
 
         Map<ConstraintBranch, ConstraintBranch> newBranches = new LinkedHashMap<>();
-        List<ConstraintBranch> newActive = new SortedList<>();
-        List<ConstraintBranch> all = new SortedList<>();
+        Set<ConstraintBranch> newActive = new LinkedHashSet<>();
+        Set<ConstraintBranch> all = new LinkedHashSet<>();
 
         int currPrio = 0;
         for (ConstraintBranch branch : this.branches.keySet()) {
@@ -134,22 +133,6 @@ public class ConstraintTree {
             }
         }
 
-        int curr = 0;
-        int prev = 0;
-
-        for (int i = 0; i < all.size(); i++) {
-            ConstraintBranch branch = all.get(i);
-            int prioTemp = branch.priority();
-
-            if (prev == branch.priority()) {
-                branch.setPriority(curr);
-            } else {
-                branch.setPriority(curr++);
-            }
-
-            prev = prioTemp;
-        }
-
         this.branches = newBranches;
         this.active = newActive;
 
@@ -160,7 +143,7 @@ public class ConstraintTree {
         addBranch(branch, this.branches, this.active, null);
     }
 
-    private static void addBranch(ConstraintBranch branch, Map<ConstraintBranch, ConstraintBranch> branches, List<ConstraintBranch> active, List<ConstraintBranch> all) {
+    private static void addBranch(ConstraintBranch branch, Map<ConstraintBranch, ConstraintBranch> branches, Set<ConstraintBranch> active, Set<ConstraintBranch> all) {
         ConstraintBranch prev = branches.putIfAbsent(branch, branch);
         if (prev != null) {
             prev.metadata().inheritFrom(branch.metadata());

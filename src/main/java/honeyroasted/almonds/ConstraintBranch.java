@@ -16,7 +16,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
 
-public class ConstraintBranch implements Comparable<ConstraintBranch> {
+public class ConstraintBranch {
     private ConstraintTree parent;
 
     private PropertySet metadata = new PropertySet();
@@ -31,15 +31,9 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
     private List<Predicate<ConstraintBranch>> changes = new ArrayList<>();
 
     private boolean trimmed;
-    private int priority;
 
-    @Override
-    public int compareTo(ConstraintBranch o) {
-        return Integer.compare(this.priority, o.priority);
-    }
-
-    public record Snapshot(PropertySet metadata, Map<Constraint, Constraint.Status> constraints, int priority) {
-        private static final Snapshot empty = new Snapshot(new PropertySet(), Collections.emptyMap(), 0);
+    public record Snapshot(PropertySet metadata, Map<Constraint, Constraint.Status> constraints) {
+        private static final Snapshot empty = new Snapshot(new PropertySet(), Collections.emptyMap());
 
         public static Snapshot empty() {
             return empty;
@@ -79,14 +73,13 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
         this.typedConstraints.forEach((t, cons) -> copy.typedConstraints.put(t, new HashSet<>(cons)));
         copy.changes.addAll(this.changes);
         copy.trimmed = this.trimmed;
-        copy.priority = this.priority;
         return copy;
     }
 
     public Snapshot snapshot() {
         ConstraintBranch copy = this.copy();
         copy.executeChanges();
-        return new Snapshot(copy.metadata, copy.constraints, copy.priority);
+        return new Snapshot(copy.metadata, copy.constraints);
     }
 
     public boolean diverged() {
@@ -99,14 +92,6 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
 
     public boolean trimmed() {
         return this.trimmed;
-    }
-
-    public int priority() {
-        return this.priority;
-    }
-
-    public void setPriority(int priority) {
-        this.priority = priority;
     }
 
     public Map<Constraint, Constraint.Status> constraints() {
@@ -158,7 +143,7 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
     public void diverge(List<? extends Map<? extends Constraint, Constraint.Status>> constraints) {
         List<Snapshot> branches = new ArrayList<>();
         for (int i = 0; i < constraints.size(); i++) {
-            branches.add(new Snapshot(emptyProperties, (Map<Constraint, Constraint.Status>) constraints.get(i), i));
+            branches.add(new Snapshot(emptyProperties, (Map<Constraint, Constraint.Status>) constraints.get(i)));
         }
         this.divergeBranches(branches);
     }
@@ -183,7 +168,6 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
                     branches.forEach(snapshot -> {
                         ConstraintBranch newBranch = this.copy(this.parent);
                         newBranch.metadata().inheritFrom(snapshot.metadata());
-                        newBranch.setPriority(snapshot.priority());
 
                         snapshot.constraints().forEach(newBranch::add);
                         newBranch.executeChanges();
@@ -196,7 +180,6 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
                             ConstraintBranch newBranch = this.copy(this.parent);
                             newBranch.metadata().inheritFrom(diverge.metadata)
                                     .inheritFrom(snapshot.metadata);
-                            newBranch.setPriority(diverge.priority() + snapshot.priority());
 
                             diverge.constraints().forEach(newBranch::add);
                             snapshot.constraints().forEach(newBranch::add);
@@ -279,7 +262,6 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
             sb.append("\n");
         }
 
-        sb.append(indent).append("Priority: ").append(this.priority).append("\n");
         sb.append(indent).append("Constraints:\n");
         this.constraints.forEach((con, stat) -> sb.append(indent).append(stat).append(": ").append(simpleName ? con.simpleName() : con).append("\n"));
 

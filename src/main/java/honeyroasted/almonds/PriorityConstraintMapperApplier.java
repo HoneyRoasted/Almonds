@@ -1,10 +1,10 @@
 package honeyroasted.almonds;
 
-import honeyroasted.almonds.util.SortedList;
-
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 public class PriorityConstraintMapperApplier implements ConstraintMapperApplier {
     private List<ConstraintMapper> mappers;
@@ -35,11 +35,11 @@ public class PriorityConstraintMapperApplier implements ConstraintMapperApplier 
     public void accept(ConstraintBranch branch) {
         ConstraintTree tree = branch.parent();
 
-        List<ConstraintBranch> branches = new SortedList<>();
+        Set<ConstraintBranch> branches = new LinkedHashSet<>();
         branches.add(branch);
 
         do {
-            List<ConstraintBranch> newTracked = new SortedList<>();
+            Set<ConstraintBranch> newTracked = new LinkedHashSet<>();
             for (ConstraintBranch sub : branches) {
                 if (sub.diverged()) {
                     sub.divergence().forEach(cb -> {
@@ -53,7 +53,7 @@ public class PriorityConstraintMapperApplier implements ConstraintMapperApplier 
 
 
             if (!branches.isEmpty()) {
-                ConstraintBranch curr = branches.getFirst();
+                ConstraintBranch curr = branches.iterator().next();
                 if (curr.status() == Constraint.Status.TRUE) {
                     return;
                 }
@@ -69,7 +69,7 @@ public class PriorityConstraintMapperApplier implements ConstraintMapperApplier 
     public void accept(ConstraintTree tree) {
         do {
             if (!tree.active().isEmpty()) {
-                ConstraintBranch curr = tree.active().getFirst();
+                ConstraintBranch curr = tree.active().iterator().next();
                 if (curr.status() == Constraint.Status.TRUE) {
                     return;
                 }
