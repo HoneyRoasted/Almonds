@@ -1,7 +1,12 @@
-package honeyroasted.almonds;
+package honeyroasted.almonds.applier;
+
+import honeyroasted.almonds.ConstraintBranch;
+import honeyroasted.almonds.ConstraintMapper;
+import honeyroasted.almonds.ConstraintTree;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 
 public class ExhaustiveConstraintMapperApplier implements ConstraintMapperApplier {
@@ -20,7 +25,7 @@ public class ExhaustiveConstraintMapperApplier implements ConstraintMapperApplie
     public List<ConstraintMapper> flattened() {
         List<ConstraintMapper> flat = new ArrayList<>();
         this.mappers.forEach(cm -> {
-            if (cm instanceof ExhaustiveConstraintMapperApplier cma) {
+            if (cm instanceof UntrimmedConstraintMapperApplier cma) {
                 flat.addAll(cma.flattened());
             } else {
                 flat.add(cm);
@@ -33,7 +38,7 @@ public class ExhaustiveConstraintMapperApplier implements ConstraintMapperApplie
     public void accept(ConstraintBranch branch) {
         ConstraintTree tree = branch.parent();
 
-        List<ConstraintBranch> branches = new ArrayList<>();
+        List<ConstraintBranch> branches = new LinkedList<>();
         branches.add(branch);
 
         do {
@@ -43,13 +48,11 @@ public class ExhaustiveConstraintMapperApplier implements ConstraintMapperApplie
                 }
             }
 
-            List<ConstraintBranch> newTracked = new ArrayList<>();
+            List<ConstraintBranch> newTracked = new LinkedList<>();
             for (ConstraintBranch sub : branches) {
                 if (sub.diverged()) {
-                    sub.divergence().forEach(cb -> {
-                        if (!cb.trimmed()) newTracked.add(cb);
-                    });
-                } else if (!sub.trimmed()) {
+                    newTracked.addAll(sub.divergence());
+                } else {
                     newTracked.add(sub);
                 }
             }
@@ -61,7 +64,7 @@ public class ExhaustiveConstraintMapperApplier implements ConstraintMapperApplie
     @Override
     public void accept(ConstraintTree tree) {
         do {
-            for (ConstraintBranch branch : tree.active()) {
+            for (ConstraintBranch branch : tree.currentBranches().keySet()) {
                 for (ConstraintMapper mapper : this.mappers) {
                     mapper.accept(branch);
                 }

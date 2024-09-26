@@ -1,1 +1,1 @@
-packageSearchIndex = [{"l":"All Packages","u":"allpackages-index.html"},{"l":"honeyroasted.almonds"}];updateSearchResults();
+packageSearchIndex = [{"l":"All Packages","u":"allpackages-index.html"},{"l":"honeyroasted.almonds"},{"l":"honeyroasted.almonds.applier"}];updateSearchResults();

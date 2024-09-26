@@ -1,15 +1,18 @@
-package honeyroasted.almonds;
+package honeyroasted.almonds.applier;
+
+import honeyroasted.almonds.ConstraintBranch;
+import honeyroasted.almonds.ConstraintMapper;
+import honeyroasted.almonds.ConstraintTree;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
 
-public class PriorityConstraintMapperApplier implements ConstraintMapperApplier {
+public class UntrimmedConstraintMapperApplier implements ConstraintMapperApplier {
     private List<ConstraintMapper> mappers;
 
-    public PriorityConstraintMapperApplier(List<ConstraintMapper> mappers) {
+    public UntrimmedConstraintMapperApplier(List<ConstraintMapper> mappers) {
         this.mappers = Collections.unmodifiableList(mappers);
     }
 
@@ -22,7 +25,7 @@ public class PriorityConstraintMapperApplier implements ConstraintMapperApplier 
     public List<ConstraintMapper> flattened() {
         List<ConstraintMapper> flat = new ArrayList<>();
         this.mappers.forEach(cm -> {
-            if (cm instanceof ExhaustiveConstraintMapperApplier cma) {
+            if (cm instanceof UntrimmedConstraintMapperApplier cma) {
                 flat.addAll(cma.flattened());
             } else {
                 flat.add(cm);
@@ -35,11 +38,17 @@ public class PriorityConstraintMapperApplier implements ConstraintMapperApplier 
     public void accept(ConstraintBranch branch) {
         ConstraintTree tree = branch.parent();
 
-        Set<ConstraintBranch> branches = new LinkedHashSet<>();
+        List<ConstraintBranch> branches = new LinkedList<>();
         branches.add(branch);
 
         do {
-            Set<ConstraintBranch> newTracked = new LinkedHashSet<>();
+            for (ConstraintBranch sub : branches) {
+                for (ConstraintMapper mapper : this.mappers) {
+                    mapper.accept(sub);
+                }
+            }
+
+            List<ConstraintBranch> newTracked = new LinkedList<>();
             for (ConstraintBranch sub : branches) {
                 if (sub.diverged()) {
                     sub.divergence().forEach(cb -> {
@@ -51,31 +60,15 @@ public class PriorityConstraintMapperApplier implements ConstraintMapperApplier 
             }
             branches = newTracked;
 
-
-            if (!branches.isEmpty()) {
-                ConstraintBranch curr = branches.iterator().next();
-                if (curr.status() == Constraint.Status.TRUE) {
-                    return;
-                }
-
-                for (ConstraintMapper mapper : this.mappers) {
-                    mapper.accept(curr);
-                }
-            }
         } while (tree.executeChanges());
     }
 
     @Override
     public void accept(ConstraintTree tree) {
         do {
-            if (!tree.active().isEmpty()) {
-                ConstraintBranch curr = tree.active().iterator().next();
-                if (curr.status() == Constraint.Status.TRUE) {
-                    return;
-                }
-
+            for (ConstraintBranch branch : tree.active()) {
                 for (ConstraintMapper mapper : this.mappers) {
-                    mapper.accept(curr);
+                    mapper.accept(branch);
                 }
             }
         } while (tree.executeChanges());

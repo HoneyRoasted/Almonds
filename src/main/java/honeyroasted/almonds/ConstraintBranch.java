@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -28,7 +29,7 @@ public class ConstraintBranch {
     private Map<Class<?>, Set<Constraint>> typedConstraintsView = Collections.unmodifiableMap(typedConstraints);
 
     private List<ConstraintBranch> divergence;
-    private List<Predicate<ConstraintBranch>> changes = new ArrayList<>();
+    private List<Predicate<ConstraintBranch>> changes = new LinkedList<>();
 
     private boolean trimmed;
 
@@ -162,7 +163,7 @@ public class ConstraintBranch {
                     branch.constraints().forEach(this::add);
                 });
             } else {
-                if (this.divergence == null) this.divergence = new ArrayList<>();
+                if (this.divergence == null) this.divergence = new LinkedList<>();
 
                 if (this.divergence.isEmpty()) {
                     branches.forEach(snapshot -> {
@@ -174,7 +175,7 @@ public class ConstraintBranch {
                         this.divergence.add(newBranch);
                     });
                 } else {
-                    List<ConstraintBranch> newDiverge = new ArrayList<>();
+                    List<ConstraintBranch> newDiverge = new LinkedList<>();
                     for (Snapshot snapshot : branches) {
                         for (ConstraintBranch diverge : this.divergence) {
                             ConstraintBranch newBranch = this.copy(this.parent);
