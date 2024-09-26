@@ -111,6 +111,7 @@ public class ConstraintTree {
 
         Map<ConstraintBranch, ConstraintBranch> newBranches = new LinkedHashMap<>();
         List<ConstraintBranch> newActive = new SortedList<>();
+        List<ConstraintBranch> all = new SortedList<>();
 
         int currPrio = 0;
         for (ConstraintBranch branch : this.branches.keySet()) {
@@ -120,7 +121,7 @@ public class ConstraintTree {
                     newBranch.setPriority(currPrio);
 
                     newBranch.executeChanges();
-                    addBranch(newBranch, newBranches, newActive);
+                    addBranch(newBranch, newBranches, newActive, all);
                 }
                 modified = true;
             } else {
@@ -128,7 +129,7 @@ public class ConstraintTree {
                 branch.setPriority(currPrio);
 
                 boolean changed = branch.executeChanges();
-                addBranch(branch, newBranches, newActive);
+                addBranch(branch, newBranches, newActive, all);
                 modified |= changed;
             }
         }
@@ -136,8 +137,8 @@ public class ConstraintTree {
         int curr = 0;
         int prev = 0;
 
-        for (int i = 0; i < newActive.size(); i++) {
-            ConstraintBranch branch = newActive.get(i);
+        for (int i = 0; i < all.size(); i++) {
+            ConstraintBranch branch = all.get(i);
             int prioTemp = branch.priority();
 
             if (prev == branch.priority()) {
@@ -156,15 +157,21 @@ public class ConstraintTree {
     }
 
     public void addBranch(ConstraintBranch branch) {
-        addBranch(branch, this.branches, this.active);
+        addBranch(branch, this.branches, this.active, null);
     }
 
-    private static void addBranch(ConstraintBranch branch, Map<ConstraintBranch, ConstraintBranch> branches, List<ConstraintBranch> active) {
+    private static void addBranch(ConstraintBranch branch, Map<ConstraintBranch, ConstraintBranch> branches, List<ConstraintBranch> active, List<ConstraintBranch> all) {
         ConstraintBranch prev = branches.putIfAbsent(branch, branch);
         if (prev != null) {
             prev.metadata().inheritFrom(branch.metadata());
-        } else if (!branch.trimmed()) {
-            active.add(branch);
+        } else {
+            if (!branch.trimmed()) {
+                active.add(branch);
+            }
+
+            if (all != null) {
+                all.add(branch);
+            }
         }
     }
 
