@@ -24,13 +24,17 @@ public class ConstraintTree {
     }
 
     public Set<ConstraintBranch> validBranches() {
-        return this.branches(cn -> cn.status().isTrue());
+        return this.branches(cn -> cn.status() == Constraint.Status.TRUE);
+    }
+
+    public Set<ConstraintBranch> unexploredBranches() {
+        return this.branches(cn -> cn.status().isUnknown());
     }
 
     public Set<ConstraintBranch> invalidBranches() {
-        return this.branches(cn -> !cn.status().isTrue());
+        return this.branches(cn -> cn.status() == Constraint.Status.FALSE);
     }
-
+    
     public Set<ConstraintBranch> branches(Predicate<ConstraintBranch> filter) {
         return this.branches.keySet().stream().filter(filter).collect(Collectors.toUnmodifiableSet());
     }
@@ -67,7 +71,8 @@ public class ConstraintTree {
 
     public String toString(boolean useSimpleName) {
         StringBuilder sb = new StringBuilder();
-        sb.append("Status: " + this.status()).append("\n");
+        sb.append("Status: ").append(this.status()).append("\n");
+        sb.append("Total Branches: ").append(this.branches().size()).append("\n");
         if (!this.metadata().all(Object.class).isEmpty()) {
             sb.append("Metadata:\n");
             this.metadata().all(Object.class).forEach(obj -> sb.append(obj).append("\n"));
@@ -75,10 +80,14 @@ public class ConstraintTree {
         }
 
         Set<ConstraintBranch> valid = this.validBranches();
+        Set<ConstraintBranch> unexplored = this.unexploredBranches();
         Set<ConstraintBranch> invalid = this.invalidBranches();
 
         sb.append("Valid Branches: ").append(valid.size()).append("\n");
         valid.forEach(cb -> sb.append(cb.toString(useSimpleName, "  ")).append("  ").append("-".repeat(100)).append("\n"));
+
+        sb.append("Unexplored Branches: ").append(unexplored.size()).append("\n");
+        unexplored.forEach(cb -> sb.append(cb.toString(useSimpleName, "  ")).append("  ").append("-".repeat(100)).append("\n"));
 
         sb.append("Invalid Branches: ").append(invalid.size()).append("\n");
         invalid.forEach(cb -> sb.append(cb.toString(useSimpleName, "  ")).append("  ").append("-".repeat(100)).append("\n"));
