@@ -29,6 +29,8 @@ public class ConstraintBranch {
     private Map<Class<?>, Set<Constraint>> typedConstraintsView = Collections.unmodifiableMap(typedConstraints);
 
     private List<ConstraintBranch> divergence;
+    private List<ConstraintBranch> newDivergence;
+
     private List<Predicate<ConstraintBranch>> changes = new LinkedList<>();
 
     private boolean trimmed;
@@ -163,7 +165,9 @@ public class ConstraintBranch {
                     branch.constraints().forEach(this::add);
                 });
             } else {
-                if (this.divergence == null) this.divergence = new LinkedList<>();
+                if (this.divergence == null) {
+                    this.divergence = new ArrayList<>();
+                }
 
                 if (this.divergence.isEmpty()) {
                     branches.forEach(snapshot -> {
@@ -175,7 +179,12 @@ public class ConstraintBranch {
                         this.divergence.add(newBranch);
                     });
                 } else {
-                    List<ConstraintBranch> newDiverge = new LinkedList<>();
+                    if (this.newDivergence == null) {
+                        this.newDivergence = new ArrayList<>();
+                    } else {
+                        this.newDivergence.clear();;
+                    }
+
                     for (Snapshot snapshot : branches) {
                         for (ConstraintBranch diverge : this.divergence) {
                             ConstraintBranch newBranch = this.copy(this.parent);
@@ -185,10 +194,13 @@ public class ConstraintBranch {
                             diverge.constraints().forEach(newBranch::add);
                             snapshot.constraints().forEach(newBranch::add);
                             newBranch.executeChanges();
-                            newDiverge.add(newBranch);
+                            newDivergence.add(newBranch);
                         }
                     }
-                    this.divergence = newDiverge;
+
+                    List<ConstraintBranch> temp = this.divergence;
+                    this.divergence = this.newDivergence;
+                    this.newDivergence = temp;
                 }
             }
         }

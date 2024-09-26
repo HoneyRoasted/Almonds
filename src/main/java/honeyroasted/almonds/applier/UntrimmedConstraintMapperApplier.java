@@ -6,7 +6,6 @@ import honeyroasted.almonds.ConstraintTree;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 
 public class UntrimmedConstraintMapperApplier implements ConstraintMapperApplier {
@@ -38,7 +37,8 @@ public class UntrimmedConstraintMapperApplier implements ConstraintMapperApplier
     public void accept(ConstraintBranch branch) {
         ConstraintTree tree = branch.parent();
 
-        List<ConstraintBranch> branches = new LinkedList<>();
+        List<ConstraintBranch> branches = new ArrayList<>();
+        List<ConstraintBranch> newTracked = new ArrayList<>();
         branches.add(branch);
 
         do {
@@ -48,17 +48,20 @@ public class UntrimmedConstraintMapperApplier implements ConstraintMapperApplier
                 }
             }
 
-            List<ConstraintBranch> newTracked = new LinkedList<>();
+            newTracked.clear();
             for (ConstraintBranch sub : branches) {
                 if (sub.diverged()) {
-                    sub.divergence().forEach(cb -> {
+                    for (ConstraintBranch cb : sub.divergence()) {
                         if (!cb.trimmed()) newTracked.add(cb);
-                    });
+                    }
                 } else if (!sub.trimmed()) {
                     newTracked.add(sub);
                 }
             }
+
+            List<ConstraintBranch> temp = branches;
             branches = newTracked;
+            newTracked = temp;
 
         } while (tree.executeChanges());
     }

@@ -56,7 +56,6 @@ public class ConstraintTree {
             return Constraint.Status.UNKNOWN;
         } else {
             Iterator<ConstraintBranch> iter = this.branches.keySet().iterator();
-            ;
             Constraint.Status curr = iter.next().status();
             while (iter.hasNext()) {
                 curr = curr.or(iter.next().status());
@@ -114,50 +113,54 @@ public class ConstraintTree {
     }
 
 
+    private Map<ConstraintBranch, ConstraintBranch> newBranches = new LinkedHashMap<>();
     public boolean executeChanges() {
         boolean modified = false;
+        newBranches.clear();
 
-        Map<ConstraintBranch, ConstraintBranch> newBranches = new LinkedHashMap<>();
-        Set<ConstraintBranch> newActive = new LinkedHashSet<>();
-        Set<ConstraintBranch> all = new LinkedHashSet<>();
+        Iterator<Map.Entry<ConstraintBranch, ConstraintBranch>> iter = this.branches.entrySet().iterator();
 
-        int currPrio = 0;
-        for (ConstraintBranch branch : this.branches.keySet()) {
+        while (iter.hasNext()) {
+            ConstraintBranch branch = iter.next().getKey();
+
             if (branch.diverged()) {
+                iter.remove();
                 for (ConstraintBranch newBranch : branch.divergence()) {
                     newBranch.executeChanges();
-                    addBranch(newBranch, newBranches, newActive, all);
+                    addBranch(newBranch, newBranches);
                 }
                 modified = true;
             } else {
                 boolean changed = branch.executeChanges();
-                addBranch(branch, newBranches, newActive, all);
+                if (changed) {
+                    iter.remove();
+                    addBranch(branch, newBranches);
+                }
                 modified |= changed;
             }
         }
-
-        this.branches = newBranches;
-        this.active = newActive;
+        newBranches.forEach((k, b) -> addBranch(k, this.branches, this.active));
 
         return modified;
     }
 
     public void addBranch(ConstraintBranch branch) {
-        addBranch(branch, this.branches, this.active, null);
+        addBranch(branch, this.branches, this.active);
     }
 
-    private static void addBranch(ConstraintBranch branch, Map<ConstraintBranch, ConstraintBranch> branches, Set<ConstraintBranch> active, Set<ConstraintBranch> all) {
+    private static void addBranch(ConstraintBranch branch, Map<ConstraintBranch, ConstraintBranch> branches, Set<ConstraintBranch> active) {
         ConstraintBranch prev = branches.putIfAbsent(branch, branch);
         if (prev != null) {
             prev.metadata().inheritFrom(branch.metadata());
-        } else {
-            if (!branch.trimmed()) {
-                active.add(branch);
-            }
+        } else if (!branch.trimmed()) {
+            active.add(branch);
+        }
+    }
 
-            if (all != null) {
-                all.add(branch);
-            }
+    private static void addBranch(ConstraintBranch branch, Map<ConstraintBranch, ConstraintBranch> branches) {
+        ConstraintBranch prev = branches.putIfAbsent(branch, branch);
+        if (prev != null) {
+            prev.metadata().inheritFrom(branch.metadata());
         }
     }
 
