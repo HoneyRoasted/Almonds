@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -180,20 +181,19 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
 
                 if (this.divergence.isEmpty()) {
                     branches.forEach(snapshot -> {
-                        ConstraintBranch newBranch = this.copy();
+                        ConstraintBranch newBranch = this.copy(this.parent);
                         newBranch.metadata().inheritFrom(snapshot.metadata());
                         newBranch.setPriority(snapshot.priority());
 
                         snapshot.constraints().forEach(newBranch::add);
                         newBranch.executeChanges();
-                        newBranch.parent = this.parent;
                         this.divergence.add(newBranch);
                     });
                 } else {
                     List<ConstraintBranch> newDiverge = new ArrayList<>();
                     for (Snapshot snapshot : branches) {
                         for (ConstraintBranch diverge : this.divergence) {
-                            ConstraintBranch newBranch = this.copy();
+                            ConstraintBranch newBranch = this.copy(this.parent);
                             newBranch.metadata().inheritFrom(diverge.metadata)
                                     .inheritFrom(snapshot.metadata);
                             newBranch.setPriority(diverge.priority() + snapshot.priority());
@@ -201,8 +201,6 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
                             diverge.constraints().forEach(newBranch::add);
                             snapshot.constraints().forEach(newBranch::add);
                             newBranch.executeChanges();
-                            newBranch.parent = this.parent;
-
                             newDiverge.add(newBranch);
                         }
                     }
@@ -218,7 +216,7 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
         this.change(branch -> {
             Constraint.Status current = branch.constraints.get(constraint);
             branch.constraints.put(constraint, status);
-            branch.typedConstraints.computeIfAbsent(constraint.getClass(), k -> new HashSet<>()).add(constraint);
+            branch.typedConstraints.computeIfAbsent(constraint.getClass(), k -> new LinkedHashSet<>()).add(constraint);
             if (status == Constraint.Status.FALSE) branch.trimmed = true;
             return current == null || current != status;
         });
@@ -228,7 +226,7 @@ public class ConstraintBranch implements Comparable<ConstraintBranch> {
     public ConstraintBranch add(Constraint constraint, Constraint.Status status) {
         this.change(branch -> {
             Object prev = branch.constraints.putIfAbsent(constraint, status);
-            branch.typedConstraints.computeIfAbsent(constraint.getClass(), k -> new HashSet<>()).add(constraint);
+            branch.typedConstraints.computeIfAbsent(constraint.getClass(), k -> new LinkedHashSet<>()).add(constraint);
             if (prev == null && status == Constraint.Status.FALSE) branch.trimmed = true;
             return prev == null;
         });
