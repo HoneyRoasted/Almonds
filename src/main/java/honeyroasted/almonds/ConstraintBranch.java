@@ -161,7 +161,9 @@ public class ConstraintBranch {
             if (!this.diverged() && branches.size() == 1) {
                 //Just adding the branch to this one
                 branches.forEach(branch -> {
-                    this.metadata.inheritFrom(branch.metadata);
+                    this.metadata().copyFrom(new PropertySet()
+                            .inheritFrom(branch.metadata())
+                            .inheritFrom(this.metadata()));
                     branch.constraints().forEach(this::add);
                 });
             } else {
@@ -171,8 +173,9 @@ public class ConstraintBranch {
 
                 if (this.divergence.isEmpty()) {
                     branches.forEach(snapshot -> {
-                        ConstraintBranch newBranch = this.copy(this.parent);
-                        newBranch.metadata().inheritFrom(snapshot.metadata());
+                        ConstraintBranch newBranch = this.copyForDivergence(this.parent);
+                        newBranch.metadata().inheritFrom(snapshot.metadata())
+                                        .inheritFrom(this.metadata);
 
                         snapshot.constraints().forEach(newBranch::add);
                         newBranch.executeChanges();
@@ -187,9 +190,10 @@ public class ConstraintBranch {
 
                     for (Snapshot snapshot : branches) {
                         for (ConstraintBranch diverge : this.divergence) {
-                            ConstraintBranch newBranch = this.copy(this.parent);
-                            newBranch.metadata().inheritFrom(diverge.metadata)
-                                    .inheritFrom(snapshot.metadata);
+                            ConstraintBranch newBranch = this.copyForDivergence(this.parent);
+                            newBranch.metadata().inheritFrom(snapshot.metadata())
+                                    .inheritFrom(diverge.metadata())
+                                    .inheritFrom(this.metadata());
 
                             diverge.constraints().forEach(newBranch::add);
                             snapshot.constraints().forEach(newBranch::add);
@@ -204,6 +208,15 @@ public class ConstraintBranch {
                 }
             }
         }
+    }
+
+    private ConstraintBranch copyForDivergence(ConstraintTree parent) {
+        ConstraintBranch copy = new ConstraintBranch(parent);
+        copy.constraints.putAll(this.constraints);
+        this.typedConstraints.forEach((t, cons) -> copy.typedConstraints.put(t, new HashSet<>(cons)));
+        copy.changes.addAll(this.changes);
+        copy.trimmed = this.trimmed;
+        return copy;
     }
 
     //Changes ---------
