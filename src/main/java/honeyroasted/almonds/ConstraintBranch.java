@@ -10,10 +10,10 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 
@@ -23,6 +23,7 @@ public class ConstraintBranch {
     private PropertySet metadata = new PropertySet();
 
     private Map<Constraint, Constraint.Status> constraints = new LinkedHashMap<>();
+    private Map<Constraint, PropertySet> constraintMetadata = new HashMap<>();
     private Map<Constraint, Constraint.Status> constraintsView = Collections.unmodifiableMap(constraints);
 
     private Map<Class<?>, Set<Constraint>> typedConstraints = new HashMap<>();
@@ -35,8 +36,13 @@ public class ConstraintBranch {
 
     private boolean trimmed;
 
-    public record Snapshot(PropertySet metadata, Map<Constraint, Constraint.Status> constraints) {
-        private static final Snapshot empty = new Snapshot(new PropertySet(), Collections.emptyMap());
+    public record Snapshot(PropertySet metadata, Map<Constraint, Constraint.Status> constraints,
+                           Map<Constraint, PropertySet> constraintMetadata) {
+        private static final Snapshot empty = new Snapshot(new PropertySet(), Collections.emptyMap(), Collections.emptyMap());
+
+        public Snapshot(PropertySet metadata, Map<Constraint, Constraint.Status> constraints) {
+            this(metadata, constraints, new HashMap<>());
+        }
 
         public static Snapshot empty() {
             return empty;
@@ -73,6 +79,7 @@ public class ConstraintBranch {
         ConstraintBranch copy = new ConstraintBranch(parent);
         copy.metadata.copyFrom(this.metadata);
         copy.constraints.putAll(this.constraints);
+        this.constraintMetadata.forEach((con, meta) -> copy.constraintMetadata.put(con, meta.copy()));
         this.typedConstraints.forEach((t, cons) -> copy.typedConstraints.put(t, new HashSet<>(cons)));
         copy.changes.addAll(this.changes);
         copy.trimmed = this.trimmed;
@@ -143,6 +150,7 @@ public class ConstraintBranch {
     }
 
     private static PropertySet emptyProperties = new PropertySet();
+
     public void diverge(List<? extends Map<? extends Constraint, Constraint.Status>> constraints) {
         List<Snapshot> branches = new ArrayList<>();
         for (int i = 0; i < constraints.size(); i++) {
@@ -155,7 +163,6 @@ public class ConstraintBranch {
         return this.divergence == null ? Collections.emptyList() : divergence;
     }
 
-
     public void divergeBranches(List<Snapshot> branches) {
         if (!branches.isEmpty()) {
             if (!this.diverged() && branches.size() == 1) {
@@ -165,6 +172,7 @@ public class ConstraintBranch {
                             .inheritFrom(branch.metadata())
                             .inheritFrom(this.metadata()));
                     branch.constraints().forEach(this::add);
+                    branch.constraintMetadata().forEach(this::addMetadata);
                 });
             } else {
                 if (this.divergence == null) {
@@ -175,9 +183,10 @@ public class ConstraintBranch {
                     branches.forEach(snapshot -> {
                         ConstraintBranch newBranch = this.copyForDivergence(this.parent);
                         newBranch.metadata().inheritFrom(snapshot.metadata())
-                                        .inheritFrom(this.metadata);
+                                .inheritFrom(this.metadata);
 
                         snapshot.constraints().forEach(newBranch::add);
+                        snapshot.constraintMetadata().forEach(newBranch::addMetadata);
                         newBranch.executeChanges();
                         this.divergence.add(newBranch);
                     });
@@ -185,7 +194,8 @@ public class ConstraintBranch {
                     if (this.newDivergence == null) {
                         this.newDivergence = new ArrayList<>();
                     } else {
-                        this.newDivergence.clear();;
+                        this.newDivergence.clear();
+                        ;
                     }
 
                     for (Snapshot snapshot : branches) {
@@ -196,7 +206,9 @@ public class ConstraintBranch {
                                     .inheritFrom(this.metadata());
 
                             diverge.constraints().forEach(newBranch::add);
+                            diverge.constraintMetadata.forEach(newBranch::addMetadata);
                             snapshot.constraints().forEach(newBranch::add);
+                            snapshot.constraintMetadata().forEach(newBranch::addMetadata);
                             newBranch.executeChanges();
                             newDivergence.add(newBranch);
                         }
@@ -213,13 +225,102 @@ public class ConstraintBranch {
     private ConstraintBranch copyForDivergence(ConstraintTree parent) {
         ConstraintBranch copy = new ConstraintBranch(parent);
         copy.constraints.putAll(this.constraints);
+        this.constraintMetadata.forEach((con, meta) -> copy.constraintMetadata.put(con, meta.copy()));
         this.typedConstraints.forEach((t, cons) -> copy.typedConstraints.put(t, new HashSet<>(cons)));
         copy.changes.addAll(this.changes);
         copy.trimmed = this.trimmed;
         return copy;
     }
 
+    public void mergeFrom(ConstraintBranch other) {
+        this.metadata.inheritFrom(other.metadata());
+        other.constraintMetadata.forEach((con, ps) -> {
+            if (this.constraints.containsKey(con)) {
+                PropertySet md = this.constraintMetadata.get(con);
+                if (md == null) {
+                    this.constraintMetadata.put(con, ps);
+                } else {
+                    md.inheritFrom(ps);
+                }
+            }
+        });
+    }
+
     //Changes ---------
+
+    private void addMetadata(Constraint constraint, PropertySet ps) {
+        this.change(branch -> {
+            PropertySet md = branch.constraintMetadata.get(constraint);
+            if (md == null) {
+                branch.constraintMetadata.put(constraint, ps);
+            } else {
+                md.inheritFrom(ps);
+            }
+            return false;
+        });
+    }
+
+    public ConstraintBranch attachMetadata(Constraint constraint, Object o) {
+        this.change(branch -> {
+            PropertySet md = branch.constraintMetadata.get(constraint);
+            if (md != null) {
+                md.attach(o);
+            }
+            return false;
+        });
+        return this;
+    }
+
+    public ConstraintBranch removeMetadata(Constraint constraint, Object o) {
+        this.change(branch -> {
+            PropertySet md = branch.constraintMetadata.get(constraint);
+            if (md != null) {
+                md.remove(o);
+            }
+            return false;
+        });
+        return this;
+    }
+
+    public <T> Set<T> allMetadata(Constraint constraint, Class<T> type) {
+        PropertySet md = this.constraintMetadata.get(constraint);
+        if (md != null) {
+            return md.all(type);
+        }
+        return Collections.emptySet();
+    }
+
+    public <T> Optional<T> firstMetadata(Constraint constraint, Class<T> type) {
+        PropertySet md = this.constraintMetadata.get(constraint);
+        if (md != null) {
+            return md.first(type);
+        }
+        return Optional.empty();
+    }
+
+    public <T> T firstOrMetadata(Constraint constraint, Class<T> type, T failback) {
+        PropertySet md = this.constraintMetadata.get(constraint);
+        if (md != null) {
+            return md.firstOr(type, failback);
+        }
+        return failback;
+    }
+
+    public <T> boolean hasMetadata(Constraint constraint, Class<T> type) {
+        PropertySet md = this.constraintMetadata.get(constraint);
+        if (md != null) {
+            return md.has(type);
+        }
+        return false;
+    }
+
+    public <T> long countMetadata(Constraint constraint, Class<T> type) {
+        PropertySet md = this.constraintMetadata.get(constraint);
+        if (md != null) {
+            return md.count(type);
+        }
+        return 0;
+    }
 
     public ConstraintBranch put(Constraint constraint, Constraint.Status status) {
         this.change(branch -> {
@@ -242,9 +343,33 @@ public class ConstraintBranch {
         return this;
     }
 
+    public ConstraintBranch reduce(Constraint result, Constraint... parents) {
+        return this.reduce(result, Constraint.Status.UNKNOWN, parents);
+    }
+
+    public ConstraintBranch reduce(Constraint result, Constraint.Status status, Constraint... parents) {
+        return this.reduce(result, status, new PropertySet(), parents);
+    }
+
+    public ConstraintBranch reduce(Constraint result, Constraint.Status status, PropertySet meta, Constraint... parents) {
+        for (Constraint con : parents) {
+            this.drop(con);
+            PropertySet md = this.constraintMetadata.get(con);
+            if (md != null) {
+                meta.inheritFrom(md);
+            }
+        }
+
+        this.set(result, status);
+        this.addMetadata(result, meta);
+
+        return this;
+    }
+
     public ConstraintBranch drop(Constraint constraint) {
         this.change(branch -> {
             Constraint.Status prev = branch.constraints.remove(constraint);
+            branch.constraintMetadata.remove(constraint);
 
             Set<Constraint> consTyped = branch.typedConstraints.get(constraint.getClass());
             if (consTyped != null) {

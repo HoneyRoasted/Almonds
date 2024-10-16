@@ -13,3 +13,4 @@ tests/
 #Files
 gradle.properties
 *.iml
+.profileconfig.json

@@ -154,7 +154,7 @@ public class ConstraintTree {
     private static void addBranch(ConstraintBranch branch, Map<ConstraintBranch, ConstraintBranch> branches, Set<ConstraintBranch> active) {
         ConstraintBranch prev = branches.putIfAbsent(branch, branch);
         if (prev != null) {
-            prev.metadata().inheritFrom(branch.metadata());
+            prev.mergeFrom(branch);
         } else if (!branch.trimmed()) {
             active.add(branch);
         }
@@ -163,7 +163,7 @@ public class ConstraintTree {
     private static void addBranch(ConstraintBranch branch, Map<ConstraintBranch, ConstraintBranch> branches) {
         ConstraintBranch prev = branches.putIfAbsent(branch, branch);
         if (prev != null) {
-            prev.metadata().inheritFrom(branch.metadata());
+            prev.mergeFrom(branch);
         }
     }
 
