@@ -5,11 +5,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-public interface Constraint {
+public interface Constraint extends SimpleName {
     Constraint TRUE = new True();
     Constraint FALSE = new False();
-
-    String simpleName();
 
     List<Object> parameters();
 

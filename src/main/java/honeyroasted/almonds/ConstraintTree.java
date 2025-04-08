@@ -74,7 +74,8 @@ public class ConstraintTree {
         sb.append("Total Branches: ").append(this.branches().size()).append("\n");
         if (!this.metadata().all(Object.class).isEmpty()) {
             sb.append("Metadata:\n");
-            this.metadata().all(Object.class).forEach(obj -> sb.append("  ").append(obj).append("\n"));
+            this.metadata().all(Object.class).forEach(obj -> sb.append("  ")
+                    .append(obj instanceof SimpleName sn && useSimpleName ? sn.simpleName() : obj).append("\n"));
             sb.append("\n");
         }
 
