@@ -17,7 +17,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 
-public class ConstraintBranch {
+public class ConstraintBranch implements SimpleName {
     private ConstraintTree parent;
 
     private PropertySet metadata = new PropertySet();
@@ -405,11 +405,16 @@ public class ConstraintBranch {
         return this.add(constraint, Constraint.Status.UNKNOWN);
     }
 
+    @Override
+    public String simpleName() {
+        return toString(true, "");
+    }
+
     public String toString(boolean simpleName, String indent) {
         StringBuilder sb = new StringBuilder();
         if (!this.metadata().all(Object.class).isEmpty()) {
             sb.append(indent).append("Metadata:\n");
-            this.metadata.all(Object.class).forEach(obj -> sb.append(indent).append(obj).append("\n"));
+            this.metadata.all(Object.class).forEach(obj -> sb.append(indent).append(obj instanceof SimpleName sn && simpleName ? sn.simpleName() : obj).append("\n"));
             sb.append("\n");
         }
 

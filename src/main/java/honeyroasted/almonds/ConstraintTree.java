@@ -13,7 +13,7 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-public class ConstraintTree {
+public class ConstraintTree implements SimpleName {
     private PropertySet metadata = new PropertySet();
 
     private Set<ConstraintBranch> active = new LinkedHashSet<>();
@@ -66,6 +66,11 @@ public class ConstraintTree {
 
     public PropertySet metadata() {
         return this.metadata;
+    }
+
+    @Override
+    public String simpleName() {
+        return toString(true);
     }
 
     public String toString(boolean useSimpleName) {
