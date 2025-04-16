@@ -3,7 +3,7 @@ name: Java CI
 on: [push, workflow_dispatch]
 
 jobs:
-  builds:
+  build_and_tag:
     runs-on: ubuntu-latest
 
     steps:
@@ -25,15 +25,60 @@ jobs:
         run: ./gradlew clean test
 
       - name: Build
-        run: ./gradlew clean build
+        run: ./gradlew build
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Artifacts
-          path: | 
+          path: |
             jype-main/build/libs
             jype-stub/build/libs
+
+      - name: List Files
+        id: list-files
+        uses: mirko-felice/list-files-action@v3.0.5
+        with:
+          repo: ${{ github.repository }}
+          ref: ${{ github.ref }}
+          path: "."
+          ext: ".gradle"
+
+      - name: Extract Version
+        id: extract-version
+        env:
+          FILES: ${{ steps.list-files.outputs.paths }}
+        run: |
+          echo "Files: $FILES"
+          echo "$FILES" | jq -r -c '.[]' | while read file; do
+            echo "Detected gradle file: $file"
+            path="$GITHUB_WORKSPACE${file:1}"
+            echo "Path: $path"
+            ver=$(awk '$1 == "version"{gsub(/'\''/, "", $2); print $2; exit}' $path)
+            if [ ! -z "$ver" ]; then
+              echo "Found version: $ver"
+              echo "ver=$ver" >> $GITHUB_OUTPUT
+              break
+            fi
+          done
+
+      - name: Check For Tag
+        uses: mukunku/tag-exists-action@v1.6.0
+        id: tag-check
+        with:
+          tag: ${{ steps.extract-version.outputs.ver }}
+
+      - env:
+          TAG_EXISTS: ${{ steps.tag-check.outputs.exists }}
+        run: echo "Tag already exists - $TAG_EXISTS (if false, a new one will be created)"
+
+      - name: Create Tag
+        if: steps.tag-check.outputs.exists == 'false' && steps.extract-version.outputs.ver != ''
+        uses: tvdias/github-tagger@v0.0.2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ steps.extract-version.outputs.ver }}
+
 
       - name: Clean Cache
         run: |
