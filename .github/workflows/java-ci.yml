@@ -31,9 +31,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Artifacts
-          path: |
-            jype-main/build/libs
-            jype-stub/build/libs
+          path: /build/libs
+
 
       - name: List Files
         id: list-files
