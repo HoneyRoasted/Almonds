@@ -1,13 +1,10 @@
 plugins {
-    id 'java'
+    id 'java-library'
     id 'maven-publish'
 }
 
-sourceCompatibility = 1.21
-targetCompatibility = 1.21
-
 group 'honeyroasted.almonds'
-version '0.0.18'
+version '0.0.22'
 
 repositories {
     mavenCentral()
@@ -15,32 +12,32 @@ repositories {
 }
 
 dependencies {
-    implementation("com.github.HoneyRoasted:Collect:0.0.11")
-
-    testImplementation('org.ow2.asm:asm:9.5',
-            'org.ow2.asm:asm-util:9.5',
-            'org.ow2.asm:asm-tree:9.5',
-            'org.ow2.asm:asm-commons:9.5',
-            'org.ow2.asm:asm-analysis:9.5')
+    api("com.github.HoneyRoasted:Collect:0.0.11")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.9.2")
 }
 
-task ghpagesJavadocs(type: Javadoc) {
-    destinationDir = file("/docs")
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(24))
+    }
+}
+
+tasks.register('htmlJavadocs', Javadoc) {
+    destinationDir = rootProject.file("/docs/" + project.name)
 
     source = sourceSets.main.allJava
     classpath = configurations.runtimeClasspath
 }
 
-task javadocJar(type: Jar) {
+tasks.register('javadocJar', Jar) {
     from javadoc
-    archiveClassifier = "javadoc"
+    archiveClassifier.set("javadoc")
 }
 
-task sourceJar(type: Jar) {
+tasks.register('sourceJar', Jar) {
     from sourceSets.main.allSource
-    archiveClassifier = "source"
+    archiveClassifier.set("source")
 }
 
 artifacts {
@@ -49,8 +46,8 @@ artifacts {
 
 publishing {
     publications {
-        mavenJava(MavenPublication) {
-            artifactId = rootProject.name
+        maven(MavenPublication) {
+            artifactId = project.name
 
             from components.java
 
