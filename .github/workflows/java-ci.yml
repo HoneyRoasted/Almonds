@@ -1,9 +1,13 @@
 name: Java CI
 
-on: [push, workflow_dispatch]
+on:
+  push:
+    branches:
+      - 'main'
+      - 'master'
 
 jobs:
-  build_and_tag:
+  build_and_release:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,16 +27,6 @@ jobs:
 
       - name: Test
         run: ./gradlew clean test
-
-      - name: Build
-        run: ./gradlew build
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: Artifacts
-          path: /build/libs
-
 
       - name: List Files
         id: list-files
@@ -78,6 +72,26 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ steps.extract-version.outputs.ver }}
 
+      - name: Permit Wrapper
+        run: chmod +x gradlew
+
+      - name: Build
+        run: ./gradlew build
+
+      - name: Create Release
+        if: steps.tag-check.outputs.exists == 'false' && steps.extract-version.outputs.ver != ''
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ steps.extract-version.outputs.ver }}
+          generateReleaseNotes: true
+          makeLatest: true
+          artifacts: "**/build/libs/*.jar"
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Artifacts
+          path: build/libs
 
       - name: Clean Cache
         run: |
